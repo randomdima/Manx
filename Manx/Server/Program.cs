@@ -1,11 +1,10 @@
-﻿using Microsoft.Owin.Hosting;
+﻿using Fleck;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Owin;
-using Microsoft.Owin;
  
 
 namespace Server
@@ -14,19 +13,21 @@ namespace Server
     {
         static void Main(string[] args)
         {
-            WebApp.Start("http://localhost:8080", InitWebApp);
-            Console.ReadLine();
-        }
-        static void InitWebApp(IAppBuilder Builder)
-        {
-            Builder.Use(Handle);
-        }
-        static Task Handle(IOwinContext ctx, Func<Task> next)
-        {
-            return Task.Run(() =>
+            var fileServer = new FileServer("http://localhost:8080/");
+            fileServer.Add(new HttpFile("index.html","AAAAAAAAAAA<b>AAAAAAAAAA</b>AAAAAAAAAAAA"));
+            fileServer.Add(new HttpFile("..//..//Scripts//OnLoad.js"));
+            fileServer.Start();
+
+            var server = new WebSocketServer("ws://0.0.0.0:8181");
+            server.Start(socket =>
             {
-                ctx.Response.Write("Hello World of " + ctx.Request.QueryString);
+                socket.OnOpen = () => Console.WriteLine("Open!");
+                socket.OnClose = () => Console.WriteLine("Close!");
+                socket.OnMessage = message => socket.Send(message);
             });
+            
+            Console.WriteLine("Listening...");
+            Console.ReadLine();
         }
     }
 }
