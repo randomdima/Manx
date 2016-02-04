@@ -6,17 +6,13 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Server
+namespace WebTools.File
 {
-    public interface IHttpListenerHandler
-    { 
-        void ProcessRequest(HttpListenerContext Context);
-    }
     public class HttpServer:IDisposable
     {
         private Task ListenerTask;
         private HttpListener Listener= new HttpListener();
-        private Dictionary<string, IHttpListenerHandler> Handlers = new Dictionary<string, IHttpListenerHandler>();
+        private Dictionary<string, HttpFile> Files = new Dictionary<string, HttpFile>();
 
         public HttpServer(string URL)
         {
@@ -24,10 +20,24 @@ namespace Server
             Start();            
         }
 
-        public void Add(string Path,IHttpListenerHandler Handler)
+        public List<HttpFile> AddFolder(string Path, string Pattern = "*")
         {
-            if (Path.StartsWith("/")) Path = "/" + Path;
-            Handlers.Add(Path, Handler);
+           return Directory.EnumerateFiles(Path, Pattern, SearchOption.AllDirectories)
+                           .OrderBy(q => q).Select(q => Add(q)).ToList();
+        }
+        public HttpFile Add(string Path)
+        {
+            return Add(new HttpFile(Path));
+        }
+        public HttpFile Add(string Path, string Content,string Type=null)
+        {
+            return Add(new HttpFile(Path, Content, Type));
+        }
+        public HttpFile Add(HttpFile Handler)
+        {
+           
+            Files.Add(Handler.Path, Handler);
+            return Handler;
         }
         public void Start()
         {
@@ -55,8 +65,8 @@ namespace Server
         }       
         private void ProcessRequest(HttpListenerContext Context)
         {
-            IHttpListenerHandler file;
-            if (Handlers.TryGetValue(Context.Request.Url.LocalPath, out file))
+            HttpFile file;
+            if (Files.TryGetValue(Context.Request.Url.LocalPath, out file))
             {
                 try
                 {

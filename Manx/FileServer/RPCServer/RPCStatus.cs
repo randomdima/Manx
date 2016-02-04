@@ -4,9 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Server
+namespace WebTools.RPC
 {
-    class qwe1
+    public enum ResponseStatus
     {
+        Success=0,
+        NotFound=1,
+        Failed=2
     }
 }
