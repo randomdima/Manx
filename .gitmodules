@@ -1,0 +1,3 @@
+[submodule "Manx/WebRPC"]
+	path = Manx/WebRPC
+	url = https://github.com/randomdima/WebRPC.git
