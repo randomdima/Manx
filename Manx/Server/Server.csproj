@@ -49,8 +49,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="FIle.cs" />
-    <Compile Include="FileServer.cs" />
+    <Compile Include="qwe1.cs" />
+    <Compile Include="Tools\FIle.cs" />
+    <Compile Include="Tools\FileServer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

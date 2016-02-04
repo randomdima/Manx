@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Server
+namespace Server.Tools
 {
-    public class HttpFile
+    public class HttpFile : IHttpListenerHandler
     {
         public string Name;
         public string Type;
@@ -35,6 +36,14 @@ namespace Server
                 case "html": return "text/html";
                 default: return "";
             }
+        }
+
+        public void ProcessRequest(HttpListenerContext Context)
+        {
+            Context.Response.StatusCode = 200;
+            Context.Response.ContentLength64 = Content.Length;
+            Context.Response.ContentType = Type;
+            Context.Response.OutputStream.Write(Content, 0, Content.Length);
         }
     }
 }

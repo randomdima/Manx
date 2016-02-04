@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "Server\Server.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "World", "World\World.csproj", "{AEEDB8F9-8738-4E31-A8CF-1011D91A4FCD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebRPC", "WebRPC\WebRPC\WebRPC.csproj", "{1E11F87C-F287-414D-A537-2223C186E97D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,6 +30,10 @@ Global
 		{AEEDB8F9-8738-4E31-A8CF-1011D91A4FCD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AEEDB8F9-8738-4E31-A8CF-1011D91A4FCD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AEEDB8F9-8738-4E31-A8CF-1011D91A4FCD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E11F87C-F287-414D-A537-2223C186E97D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E11F87C-F287-414D-A537-2223C186E97D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E11F87C-F287-414D-A537-2223C186E97D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E11F87C-F287-414D-A537-2223C186E97D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
