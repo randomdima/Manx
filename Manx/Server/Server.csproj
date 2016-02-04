@@ -58,7 +58,7 @@
     <Content Include="Scripts\OnLoad.js" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\FileServer\WebTools.csproj">
+    <ProjectReference Include="..\WebTools\WebTools.csproj">
       <Project>{0c5c2121-463d-4b80-9370-f3a1251a8fb3}</Project>
       <Name>WebTools</Name>
     </ProjectReference>
