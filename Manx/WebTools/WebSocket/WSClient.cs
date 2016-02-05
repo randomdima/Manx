@@ -24,7 +24,7 @@ namespace WebTools.WebSocket
     }
     public class WSClient:IDisposable
     {
-        private static UTF8Encoding Encoder= new UTF8Encoding(false, true);
+        private static UTF8Encoding Encoder= new UTF8Encoding(false, false);
         private static Regex KeyRegex = new Regex("Sec-WebSocket-Key: (.*)");
         private static byte[] HandshakeMessageA = Encoder.GetBytes("HTTP/1.1 101 Switching Protocols\r\nConnection:Upgrade\r\nUpgrade:websocket\r\nSec-WebSocket-Accept:");
         private static byte[] HandshakeMessageB = Encoder.GetBytes("\r\n\r\n");
@@ -78,53 +78,38 @@ namespace WebTools.WebSocket
         }
         protected void ProcessData(TcpClient client)
         {
-            bool handshake = false;
             var stream = client.GetStream();
-           
+            StringBuilder sb =new StringBuilder();
+            var RBS = client.ReceiveBufferSize;
+            Handshake(stream);
             while (true)
             {
-                while (!stream.DataAvailable) Thread.Sleep(1);
-                var Available = client.Available;
-                if (!handshake)
-                {
-                    Handshake(stream, stream.ReadBytes(Available));
-                    handshake = true;
-                    continue;
-                }
-
-                var first = stream.ReadByte();
-                if ((first & 15) != (int)FrameType.Text) continue;
-                var isFinal = (first & 128) != 0;
-                var len = stream.ReadByte() & 127;
+                var header = stream.ReadBytes(2);             
+                if ((header[0] & 15) == 8) return;  //If closed
+                var len = header[1] & 127;
                 if (len == 127)
                     len = (int)ToUInt64(stream.ReadBytes(8));
-                else
-                    if (len == 126)
-                        len = (int)ToUInt16(stream.ReadBytes(2));
+                else if (len == 126)
+                    len = (int)ToUInt16(stream.ReadBytes(2));
                 var mask = stream.ReadBytes(4);
-
-                var bytes=new byte[len];
+                var bytes=new byte[len];              
                 var loaded = 0;
-                while (loaded<len)
-                {
-                    loaded+=stream.Read(bytes, loaded, client.Available);
-                    while (!stream.DataAvailable) Thread.Sleep(1);
-                }
-                while (loaded-- > 0) bytes[loaded] ^= mask[loaded % 4];
-
-                if (isFinal)
-                {
-                    Console.WriteLine(Encoder.GetString(bytes));
-                }
+                while (loaded < len)    //loading until loaded xD
+                    loaded += stream.Read(bytes, loaded, Math.Min(RBS, len - loaded));                
+                while (len-- >0) bytes[len] ^= mask[len % 4];   //demasking data
+                sb.Append(Encoder.GetString(bytes));                
+                if ((header[0] & 128) == 0) continue;   //If not yet final block              
+                Console.Write(sb);
+                sb.Clear(); 
             }
         }
-        protected void Handshake(NetworkStream stream,byte[] data)
+        protected void Handshake(NetworkStream stream)
         {
-            string text = Encoder.GetString(data);
+            string text = Encoder.GetString(stream.ReadBytes(1000));
             if (string.IsNullOrEmpty(text)) return;
             string key = KeyRegex.Match(text).Groups[1].Value.Trim();
             if (string.IsNullOrEmpty(key)) return;
-            data =Encoder.GetBytes(
+            var data =Encoder.GetBytes(
                         Convert.ToBase64String(
                             Encryptor.ComputeHash(
                                 Encoder.GetBytes(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"))));

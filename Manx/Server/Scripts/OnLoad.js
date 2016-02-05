@@ -1,12 +1,12 @@
 ﻿window.onload = function () {
     var socket = new WebSocket('ws://localhost:8181');
-    socket.onopen = function () {
-        var x = 100000;
-        var arr = new Array(100000);
-        while (x--) arr[x] = x;        
-        socket.send(arr.join(' '));
-    };
+    var s = '';
+    for (var x = 0; x < 1000000; x++) s += ' ' + x;
+    window.onclick=function()
+    {
 
+        socket.send(s);
+    }
     socket.onmessage = function (event) {
         alert(event.data);
     };

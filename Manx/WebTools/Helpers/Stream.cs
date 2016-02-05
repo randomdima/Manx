@@ -12,7 +12,7 @@ namespace WebTools.Helpers
         public static byte[] ReadBytes(this Stream stream, int length)
         {
             var bytes = new byte[length];
-            stream.Read(bytes, 0, length);
+            var qwe=stream.Read(bytes, 0, length);
             return bytes;
         }
     }
