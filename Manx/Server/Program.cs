@@ -4,32 +4,34 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using WebTools.File;
+using System.Timers;
+using WebTools.HttpServer;
 using WebTools.RPC;
 using WebTools.WebSocket;
- 
+
 
 namespace Server.Tools
 {
     class Program
     {
-        static WSServer wsServer = new WSServer();
-        static HttpServer fileServer =  new HttpServer("http://localhost:8080/");
         static void Main(string[] args)
         {
-            //wsServer.Add(typeof(Program));
-            //wsServer.Start();
+            using (HttpServer server = new HttpServer(port:12397))
+            {
+                var files = server.AddFolder("..\\..\\Scripts", "*.js");
+                server.Add(new HtmlFile("", "Manx", files));
 
-            var files = fileServer.AddFolder("..\\..\\Scripts", "*.js");
-            //files.Add(fileServer.Add("Client.js", RPCServer.Client));
-            fileServer.Add(new HtmlFile("", "Manx", files));
-            fileServer.Start();
+                var WS = new WSHandler();
+                server.Add("ws",WS);
+                server.Start();
+                WS.OnConnect += q =>
+                {
+                    q.OnMessage += m => { WS.Send(m); };
+                };
 
-            wsServer.Start();
-            
-            Console.WriteLine("Listening...");
-            Console.ReadLine();
-            wsServer.Stop();
+                Console.WriteLine("Listening...");
+                Console.ReadLine();
+            }
         }
 
         [RPCMember]

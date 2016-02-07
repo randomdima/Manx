@@ -44,12 +44,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Helpers\Exception.cs" />
-    <Compile Include="FileServer\File.cs" />
-    <Compile Include="FileServer\FileServer.cs" />
-    <Compile Include="FileServer\HtmlFile.cs" />
+    <Compile Include="HttpServer\File.cs" />
+    <Compile Include="HttpServer\HttpServer.cs" />
+    <Compile Include="HttpServer\HtmlFile.cs" />
     <Compile Include="Helpers\MemoryProfileProvider.cs" />
     <Compile Include="Helpers\Querable.cs" />
     <Compile Include="Helpers\Stream.cs" />
+    <Compile Include="HttpServer\IHttpHandler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -62,7 +63,7 @@
     <Compile Include="RPCServer\RPCStatus.cs" />
     <Compile Include="RPCServer\Server.cs" />
     <Compile Include="WebSocket\WSClient.cs" />
-    <Compile Include="WebSocket\WSServer.cs" />
+    <Compile Include="WebSocket\WSHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="RPCServer\Client.js" />

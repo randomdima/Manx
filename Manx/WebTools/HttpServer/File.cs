@@ -3,45 +3,49 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using WebTools.Helpers;
 
-namespace WebTools.File
+namespace WebTools.HttpServer
 {
-    public class HttpFile 
+    public class HttpFile:IHttpHandler 
     {
         public string Path;
-        public string Type;
         public byte[] Content;
 
         protected HttpFile() { }
         public HttpFile(string path)
         {
-            Content = Encoding.UTF8.GetBytes(System.IO.File.ReadAllText(path));           
-            Type = MimeMapping.GetMimeMapping(path);
+            SetContent(MimeMapping.GetMimeMapping(path),File.ReadAllText(path));
             SetPath(path);
         }
         public HttpFile(string path, string content, string type = null)
         {
-            Content = Encoding.UTF8.GetBytes(content);
-            Type = type;
+            SetContent(type??MimeMapping.GetMimeMapping(path), content);
             SetPath(path);
         }
 
+        public void SetContent(string Type, string content)
+        {
+            Content = HttpServer.GetHttpResponse("200", Type, content);
+        }
+        public void SetContent(string Type,byte[] content)
+        {
+            Content = HttpServer.GetHttpResponse("200", Type, content);
+        }
         protected void SetPath(string path)
         {      
             Path = path;
             Path = Path.Replace("\\", "/").Replace("..","up");
             if (!Path.StartsWith("/")) Path = "/" + Path;
-            if (Type == null) Type = MimeMapping.GetMimeMapping(Path);
         }
-        public void ProcessRequest(HttpListenerContext Context)
+        public void Handle(Stream stream,byte[] request)
         {
-            Context.Response.StatusCode = 200;
-            Context.Response.ContentLength64 = Content.Length;
-            Context.Response.ContentType = Type;
-            Context.Response.OutputStream.Write(Content, 0, Content.Length);
+            stream.Write(Content);
+            stream.Flush();
         }
     }
 }

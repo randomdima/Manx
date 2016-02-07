@@ -5,15 +5,14 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 
-namespace WebTools.File
+namespace WebTools.HttpServer
 {
     public class HtmlFile:HttpFile
     {
         public HtmlFile(string Path,string Title,List<HttpFile> Scripts){
 
             var scriptsRef = string.Join("\n", Scripts.Select(q=>"<script class='text/javascript' src='"+q.Path+"'></script>"));
-            this.Content = Encoding.UTF8.GetBytes(@"<html><head>" + scriptsRef + "</head><body></body></html>");
-            this.Type = "text/html";
+            SetContent("text/html","<html><head>" + scriptsRef + "</head><body></body></html>");
             this.SetPath(Path);
         }
     }

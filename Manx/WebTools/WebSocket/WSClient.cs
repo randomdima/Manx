@@ -13,111 +13,98 @@ using WebTools.Helpers;
 
 namespace WebTools.WebSocket
 {
-    public enum FrameType : byte
+    public class WSClient
     {
-        Continuation,
-        Text,
-        Binary,
-        Close = 8,
-        Ping = 9,
-        Pong = 10,
-    }
-    public class WSClient:IDisposable
-    {
-        private static UTF8Encoding Encoder= new UTF8Encoding(false, false);
-        private static Regex KeyRegex = new Regex("Sec-WebSocket-Key: (.*)");
-        private static byte[] HandshakeMessageA = Encoder.GetBytes("HTTP/1.1 101 Switching Protocols\r\nConnection:Upgrade\r\nUpgrade:websocket\r\nSec-WebSocket-Accept:");
-        private static byte[] HandshakeMessageB = Encoder.GetBytes("\r\n\r\n");
-        private static SHA1 Encryptor = SHA1.Create();
-
-        private Task listener;
-
-        public void Dispose()
+        private static UTF8Encoding Encoder;
+        private static byte[] HandshakePatternA;
+        private static byte[] HandshakePatternB;
+        private static byte[] KeyPrefix;
+        private static byte[] KeyPattern;
+        private static byte SpaceKey;
+        private static SHA1 Encryptor;
+        private const byte MaskSize = 4; 
+        static WSClient()
         {
-            if (listener != null) listener.Dispose();
+            Encoder = new UTF8Encoding(false, false);
+            Encryptor = SHA1.Create();
+            SpaceKey = Encoder.GetBytes(" ")[0];
+            KeyPattern = Encoder.GetBytes("************************258EAFA5-E914-47DA-95CA-C5AB0DC85B11");            
+            KeyPrefix = Encoder.GetBytes("Sec-WebSocket-Key:");
+            HandshakePatternA = Encoder.GetBytes("HTTP/1.1 101 Switching Protocols\r\nConnection:Upgrade\r\nUpgrade:websocket\r\nSec-WebSocket-Accept:");
+            HandshakePatternB = Encoder.GetBytes("\r\n\r\n");
         }
-        public void Listen(TcpClient client)
+        
+        protected Stream wsStream;
+        protected object locker=new object();
+        public event Action<string> OnMessage;
+        public WSClient(Stream stream)
         {
-            Dispose();
-            listener = Task.Run(() => { ProcessData(client); });
+            wsStream = stream;
         }
-
-        protected uint ToUInt16(byte[] m_buffer)
+        public void Listen()
         {
-            if (BitConverter.IsLittleEndian)
-                 return (uint)(m_buffer[1] | (m_buffer[0] << 0x08));
-            return (uint)(m_buffer[0] | (m_buffer[1] << 0x08));
-        }
-        protected long ToUInt64(byte[] m_buffer)
-        {
-            uint num, num2;
-
-            if (BitConverter.IsLittleEndian)
-            {
-                num = (uint)(((m_buffer[7] |
-                             (m_buffer[6] << 0x08)) |
-                             (m_buffer[5] << 0x10)) |
-                             (m_buffer[4] << 0x18));
-                num2 = (uint)(((m_buffer[3] |
-                           (m_buffer[2] << 0x08)) |
-                           (m_buffer[1] << 0x10)) |
-                           (m_buffer[0] << 0x18));
-            }
-            else
-            {
-                num = (uint)(((m_buffer[0] |
-                          (m_buffer[1] << 0x08)) |
-                          (m_buffer[2] << 0x10)) |
-                          (m_buffer[3] << 0x18));
-                num2 = (uint)(((m_buffer[4] |
-                           (m_buffer[5] << 0x08)) |
-                           (m_buffer[6] << 0x10)) |
-                           (m_buffer[7] << 0x18));
-            }
-            return (long)((num2 << 0x20) | num);
-        }
-        protected void ProcessData(TcpClient client)
-        {
-            var stream = client.GetStream();
             StringBuilder sb =new StringBuilder();
-            var RBS = client.ReceiveBufferSize;
-            Handshake(stream);
             while (true)
             {
-                var header = stream.ReadBytes(2);             
-                if ((header[0] & 15) == 8) return;  //If closed
-                var len = header[1] & 127;
-                if (len == 127)
-                    len = (int)ToUInt64(stream.ReadBytes(8));
-                else if (len == 126)
-                    len = (int)ToUInt16(stream.ReadBytes(2));
-                var mask = stream.ReadBytes(4);
-                var bytes=new byte[len];              
-                var loaded = 0;
-                while (loaded < len)    //loading until loaded xD
-                    loaded += stream.Read(bytes, loaded, Math.Min(RBS, len - loaded));                
-                while (len-- >0) bytes[len] ^= mask[len % 4];   //demasking data
-                sb.Append(Encoder.GetString(bytes));                
-                if ((header[0] & 128) == 0) continue;   //If not yet final block              
-                Console.Write(sb);
+                var header = wsStream.Read(2);             
+                if ((header[0] & 15) == 8) break;  //If closed
+                var len = (header[1]==255? (int)wsStream.ReadInt64():
+                          (header[1]==254? (int)wsStream.ReadInt16():
+                           header[1] & 127)) + MaskSize;
+                var bytes = wsStream.Read(len);    
+                while (len--> MaskSize) bytes[len] ^= bytes[len % MaskSize];   //demasking data
+                sb.Append(Encoder.GetString(bytes, MaskSize, bytes.Length- MaskSize));
+                if(header[0] < 128) continue;   //If not yet final block              
+                onMessage(sb.ToString());
                 sb.Clear(); 
             }
         }
-        protected void Handshake(NetworkStream stream)
+        public void Handshake(byte[] request)
         {
-            string text = Encoder.GetString(stream.ReadBytes(1000));
-            if (string.IsNullOrEmpty(text)) return;
-            string key = KeyRegex.Match(text).Groups[1].Value.Trim();
-            if (string.IsNullOrEmpty(key)) return;
-            var data =Encoder.GetBytes(
-                        Convert.ToBase64String(
-                            Encryptor.ComputeHash(
-                                Encoder.GetBytes(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"))));
+            int m = 0,q = 0;
+            while (m != KeyPrefix.Length)
+                if (request[q++] != KeyPrefix[m++])
+                    m = 0;                
+            while (request[++q] == SpaceKey);
+            var _KeyPattern = new byte[KeyPattern.Length];
+            Buffer.BlockCopy(KeyPattern, 0, _KeyPattern, 0, KeyPattern.Length);
+            Buffer.BlockCopy(request, q, _KeyPattern, 0, 24);                  
 
-
-            stream.Write(HandshakeMessageA, 0, HandshakeMessageA.Length);
-            stream.Write(data, 0, data.Length);
-            stream.Write(HandshakeMessageB, 0, HandshakeMessageB.Length);
+            wsStream.Write(HandshakePatternA);
+            wsStream.Write(Convert.ToBase64String(Encryptor.ComputeHash(_KeyPattern)));
+            wsStream.Write(HandshakePatternB);
+            wsStream.Flush();
+        }
+        protected void onMessage(string Message)
+        {
+            if (OnMessage != null) OnMessage(Message);
+        }
+        protected void SendData(byte[] data)
+        {
+            //if(!wsStream.Connected) return;
+            wsStream.WriteByte(129);
+            if (data.Length > UInt16.MaxValue)
+            {
+                wsStream.WriteByte(127);
+                wsStream.WriteInt64((ulong)data.Length);
+            }
+            else if (data.Length > 125)
+            {
+                wsStream.WriteByte(126);
+                wsStream.WriteInt16((ushort)data.Length);
+            }
+            else {
+                wsStream.WriteByte((byte)data.Length);
+            }
+            wsStream.Write(data);
+            wsStream.Flush();
+        }
+        public void Send(string Message)
+        {
+            ThreadPool.QueueUserWorkItem((q)=> {
+                var data = Encoder.GetBytes(Message);
+                lock (locker) SendData(data);
+            });
         }
     }
 }
