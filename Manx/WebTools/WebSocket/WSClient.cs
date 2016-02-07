@@ -37,10 +37,12 @@ namespace WebTools.WebSocket
         
         protected Stream wsStream;
         protected object locker=new object();
+        protected Task sender;
         public event Action<string> OnMessage;
         public WSClient(Stream stream)
         {
             wsStream = stream;
+            sender = Task.Run(() => { });
         }
         public void Listen()
         {
@@ -78,33 +80,35 @@ namespace WebTools.WebSocket
         }
         protected void onMessage(string Message)
         {
-            if (OnMessage != null) OnMessage(Message);
+            if (OnMessage != null) Task.Run(()=>OnMessage(Message));
+        }
+        protected void SendData(object data)
+        {
+            SendData(data as byte[]);
         }
         protected void SendData(byte[] data)
         {
-            lock (locker)
+            wsStream.WriteByte(129);
+            if (data.Length > UInt16.MaxValue)
             {
-                wsStream.WriteByte(129);
-                if (data.Length > UInt16.MaxValue)
-                {
-                    wsStream.WriteByte(127);
-                    wsStream.WriteInt64((ulong)data.Length);
-                }
-                else if (data.Length > 125)
-                {
-                    wsStream.WriteByte(126);
-                    wsStream.WriteInt16((ushort)data.Length);
-                }
-                else {
-                    wsStream.WriteByte((byte)data.Length);
-                }
-                wsStream.Write(data);
-                wsStream.Flush();
+                wsStream.WriteByte(127);
+                wsStream.WriteInt64((ulong)data.Length);
             }
+            else if (data.Length > 125)
+            {
+                wsStream.WriteByte(126);
+                wsStream.WriteInt16((ushort)data.Length);
+            }
+            else {
+                wsStream.WriteByte((byte)data.Length);
+            }
+            wsStream.Write(data);
+            wsStream.Flush();
         }
         public void Send(byte[] data)
         {
-            Task.Run(() => { SendData(data); });
+            lock(locker) 
+                sender = sender.ContinueWith(q => { SendData(data); });
         }
     }
 

@@ -47,7 +47,8 @@ namespace WebTools.WebSocket
         {
             var data = Encoding.UTF8.GetBytes(Message);
             clientsLocker.EnterReadLock();
-            foreach (var c in Clients) c.Send(data);
+            foreach (var q in Clients) q.Send(data);
+            //Parallel.ForEach(Clients, q => q.Send(data));
             clientsLocker.ExitReadLock();
         }
     }
