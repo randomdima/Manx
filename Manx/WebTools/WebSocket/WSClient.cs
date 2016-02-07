@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -81,30 +82,30 @@ namespace WebTools.WebSocket
         }
         protected void SendData(byte[] data)
         {
-            //if(!wsStream.Connected) return;
-            wsStream.WriteByte(129);
-            if (data.Length > UInt16.MaxValue)
+            lock (locker)
             {
-                wsStream.WriteByte(127);
-                wsStream.WriteInt64((ulong)data.Length);
+                wsStream.WriteByte(129);
+                if (data.Length > UInt16.MaxValue)
+                {
+                    wsStream.WriteByte(127);
+                    wsStream.WriteInt64((ulong)data.Length);
+                }
+                else if (data.Length > 125)
+                {
+                    wsStream.WriteByte(126);
+                    wsStream.WriteInt16((ushort)data.Length);
+                }
+                else {
+                    wsStream.WriteByte((byte)data.Length);
+                }
+                wsStream.Write(data);
+                wsStream.Flush();
             }
-            else if (data.Length > 125)
-            {
-                wsStream.WriteByte(126);
-                wsStream.WriteInt16((ushort)data.Length);
-            }
-            else {
-                wsStream.WriteByte((byte)data.Length);
-            }
-            wsStream.Write(data);
-            wsStream.Flush();
         }
-        public void Send(string Message)
+        public void Send(byte[] data)
         {
-            ThreadPool.QueueUserWorkItem((q)=> {
-                var data = Encoder.GetBytes(Message);
-                lock (locker) SendData(data);
-            });
+            Task.Run(() => { SendData(data); });
         }
     }
+
 }

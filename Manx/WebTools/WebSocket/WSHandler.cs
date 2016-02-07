@@ -45,8 +45,9 @@ namespace WebTools.WebSocket
 
         public void Send(string Message)
         {
+            var data = Encoding.UTF8.GetBytes(Message);
             clientsLocker.EnterReadLock();
-            foreach (var c in Clients) c.Send(Message);
+            foreach (var c in Clients) c.Send(data);
             clientsLocker.ExitReadLock();
         }
     }

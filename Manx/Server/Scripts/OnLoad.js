@@ -7,8 +7,9 @@
     cnv.height = cnv.offsetHeight;
     var context = cnv.getContext('2d');
 
-    var socket = new WebSocket('ws://213.231.54.11:12397/ws');
-    //var socket = new WebSocket('ws://192.168.0.118:12397/ws');
+  //  var socket = new WebSocket('ws://213.231.54.11:12397/ws');
+    var socket = new WebSocket('ws://192.168.0.118:12397/ws');
+    //var socket = new WebSocket('ws://localhost:12397/ws');
     var color = getRandomColor();
  
     socket.onmessage = function (e) {

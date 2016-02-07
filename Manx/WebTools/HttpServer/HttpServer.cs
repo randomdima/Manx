@@ -70,7 +70,7 @@ namespace WebTools.HttpServer
         protected void ProcessRequest(Object StateInfo)
         {
             var client = StateInfo as TcpClient;
-            client.NoDelay = true;
+            //client.NoDelay = true;
             var stream = client.GetStream();
             var req = stream.Read();                   
             var q = 3; //Skip "GET "
