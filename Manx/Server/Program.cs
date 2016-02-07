@@ -28,7 +28,11 @@ namespace Server.Tools
                 {
                     q.OnMessage += m => { WS.Send(m); };
                 };
-
+                Random x=new Random();
+                Timer T = new Timer();
+                T.Interval = 1000;
+                T.Elapsed += (q,w)=> WS.Send("{x:"+x.Next(2000)+ ",y:" + x.Next(1000) + ",c:'red'}");
+                T.Start();
                 Console.WriteLine("Listening...");
                 Console.ReadLine();
             }

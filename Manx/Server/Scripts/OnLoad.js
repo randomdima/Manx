@@ -1,4 +1,5 @@
-﻿window.onload = function () {
+﻿var pos;
+window.onload = function () {
     var cnv = document.createElement('canvas');
     cnv.style.width = '100%';
     cnv.style.height = '100%';
@@ -7,13 +8,13 @@
     cnv.height = cnv.offsetHeight;
     var context = cnv.getContext('2d');
 
-   // var socket = new WebSocket('ws://46.250.7.115:12397/ws');
-    var socket = new WebSocket('ws://192.168.0.118:12397/ws');
+    var socket = new WebSocket('ws://'+window.location.host+'/ws');
+    //var socket = new WebSocket('ws://192.168.0.118:12397/ws');
     //var socket = new WebSocket('ws://localhost:12397/ws');
     var color = getRandomColor();
  
     socket.onmessage = function (e) {
-        var pos = JSON.parse(e.data);
+        eval('pos=' + e.data);
         context.beginPath();
         context.arc(pos.x, pos.y, 20, 0, 2 * Math.PI, false);
         context.fillStyle = pos.c;
