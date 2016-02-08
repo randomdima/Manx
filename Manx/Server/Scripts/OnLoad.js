@@ -16,7 +16,7 @@ window.onload = function () {
     socket.onmessage = function (e) {
         eval('pos=' + e.data);
         context.beginPath();
-        context.arc(pos.x, pos.y, 20, 0, 2 * Math.PI, false);
+        context.arc(pos.x, pos.y, 5, 0, 2 * Math.PI, false);
         context.fillStyle = pos.c;
         context.fill();
     };
