@@ -16,9 +16,10 @@ namespace Server.Tools
     {
         static void Main(string[] args)
         {
+            System.Diagnostics.Process.GetCurrentProcess().PriorityClass = System.Diagnostics.ProcessPriorityClass.High;
             using (HttpServer server = new HttpServer(port:12397))
             {
-                var files = server.AddFolder("Scripts", "*.js");
+                var files = server.AddFolder("..//..//Scripts", "*.js");
                 server.Add(new HtmlFile("", "Manx", files));
 
                 var WS = new WSHandler();
@@ -26,13 +27,13 @@ namespace Server.Tools
                 server.Start();
                 WS.OnConnect += q =>
                 {
-                    q.OnMessage += m => { WS.Send(m); };
+                    q.OnMessage += m => {
+                        var qm = m.Replace("\"x\"", "_y").Replace("\"y\"", "_x").Replace("\"ly\"", "_lx").Replace("\"lx\"", "_ly")
+                                   .Replace("_x", "\"x\"").Replace("_y", "\"y\"").Replace("_lx", "\"lx\"").Replace("_ly", "\"ly\"");
+                        WS.Send(m);
+                        WS.Send(qm);
+                    };
                 };
-                Random x=new Random();
-                Timer T = new Timer();
-                T.Interval = 1000;
-                T.Elapsed += (q,w)=> WS.Send("{x:"+x.Next(2000)+ ",y:" + x.Next(1000) + ",c:'green'}");
-                T.Start();
                 Console.WriteLine("Listening...");
                 Console.ReadLine();
             }

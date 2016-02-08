@@ -30,11 +30,11 @@ namespace WebTools.HttpServer
 
         public void SetContent(string Type, string content)
         {
-            Content = HttpServer.GetHttpResponse("200", Type, content);
+            Content = HttpServer.BuildHttpResponse("200", Type, content);
         }
         public void SetContent(string Type,byte[] content)
         {
-            Content = HttpServer.GetHttpResponse("200", Type, content);
+            Content = HttpServer.BuildHttpResponse("200", Type, content);
         }
         protected void SetPath(string path)
         {      
@@ -45,7 +45,7 @@ namespace WebTools.HttpServer
         public void Handle(Stream stream,byte[] request)
         {
             stream.Write(Content);
-            stream.Flush();
+           // stream.Flush();
         }
     }
 }

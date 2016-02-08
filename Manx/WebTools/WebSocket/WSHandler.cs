@@ -45,10 +45,9 @@ namespace WebTools.WebSocket
 
         public void Send(string Message)
         {
-            var data = Encoding.UTF8.GetBytes(Message);
+            var data = WSClient.BuildRespose(Message);
             clientsLocker.EnterReadLock();
-            foreach (var q in Clients) q.Send(data);
-            //Parallel.ForEach(Clients, q => q.Send(data));
+            Parallel.ForEach(Clients, new ParallelOptions { MaxDegreeOfParallelism = 50 }, q => q.SendRaw(data));
             clientsLocker.ExitReadLock();
         }
     }

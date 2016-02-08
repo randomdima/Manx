@@ -32,7 +32,7 @@ namespace WebTools.HttpServer
         private static byte[] HttpHeaderB = Encoder.GetBytes(" OK\r\nContent-Type: ");
         private static byte[] HttpHeaderC = Encoder.GetBytes("\r\nContent-Length: ");
         private static byte[] HttpHeaderE = Encoder.GetBytes("\r\n\r\n");
-        public static byte[] GetHttpResponse(string code, string type, byte[] content)
+        public static byte[] BuildHttpResponse(string code, string type, byte[] content)
         {
             return StreamHelpers.Join(HttpHeaderA,
                                       Encoder.GetBytes(code),
@@ -43,16 +43,16 @@ namespace WebTools.HttpServer
                                       HttpHeaderE,
                                       content);
         }
-        public static byte[] GetHttpResponse(string code, string type, string content)
+        public static byte[] BuildHttpResponse(string code, string type, string content)
         {
-            return GetHttpResponse(code, type, Encoder.GetBytes(content));
+            return BuildHttpResponse(code, type, Encoder.GetBytes(content));
         }
         public void Start()
         {
             Dispose();
             Listener.Start();
-            ThreadPool.SetMinThreads(2, 2);
-            ThreadPool.SetMaxThreads(100, 100);
+            ThreadPool.SetMinThreads(50, 50);
+            ThreadPool.SetMaxThreads(200, 200);
             MainThread = new Thread(()=> {
                 while (true) ThreadPool.QueueUserWorkItem(new WaitCallback(ProcessRequest), Listener.AcceptTcpClient());                
             });
@@ -70,7 +70,7 @@ namespace WebTools.HttpServer
         protected void ProcessRequest(Object StateInfo)
         {
             var client = StateInfo as TcpClient;
-            //client.NoDelay = true;
+            client.NoDelay = true;
             var stream = client.GetStream();
             var req = stream.Read();                   
             var q = 3; //Skip "GET "
@@ -98,12 +98,12 @@ namespace WebTools.HttpServer
                 {
                     Console.WriteLine("--------------");
                     Console.WriteLine(E.Message);
-                    stream.Write(GetHttpResponse("500", "text/html", E.Message));
+                    stream.Write(BuildHttpResponse("500", "text/html", E.Message));
                 }
             }
             else
             {
-                stream.Write(GetHttpResponse("404", "text/html", "Not found"));
+                stream.Write(BuildHttpResponse("404", "text/html", "Not found"));
             }
         }
 

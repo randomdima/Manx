@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -35,28 +36,25 @@ namespace WebTools.WebSocket
             HandshakePatternB = Encoder.GetBytes("\r\n\r\n");
         }
         
-        protected Stream wsStream;
-        protected object locker=new object();
-        protected Task sender;
+        protected Stream wsStream;      
         public event Action<string> OnMessage;
         public WSClient(Stream stream)
         {
-            wsStream = stream;
-            sender = Task.Run(() => { });
+            wsStream = stream;        
         }
-        public void Listen()
+        public unsafe void Listen()
         {
             StringBuilder sb =new StringBuilder();
             while (true)
             {
                 var header = wsStream.Read(2);             
-                if ((header[0] & 15) == 8) break;  //If closed
+                if ((header[0] & 8) > 0)  break;  //If closed
                 var len = (header[1]==255? (int)wsStream.ReadInt64():
                           (header[1]==254? (int)wsStream.ReadInt16():
                            header[1] & 127)) + MaskSize;
                 var bytes = wsStream.Read(len);    
                 while (len--> MaskSize) bytes[len] ^= bytes[len % MaskSize];   //demasking data
-                sb.Append(Encoder.GetString(bytes, MaskSize, bytes.Length- MaskSize));
+                sb.Append(Encoder.GetString(bytes,MaskSize,bytes.Length-MaskSize));
                 if(header[0] < 128) continue;   //If not yet final block              
                 onMessage(sb.ToString());
                 sb.Clear(); 
@@ -78,37 +76,48 @@ namespace WebTools.WebSocket
             wsStream.Write(HandshakePatternB);
             wsStream.Flush();
         }
-        protected void onMessage(string Message)
+        protected void onMessage(string message)
         {
-            if (OnMessage != null) Task.Run(()=>OnMessage(Message));
+            if (OnMessage != null) Task.Run(()=>OnMessage(message));
         }
-        protected void SendData(object data)
+        public unsafe static byte[] BuildRespose(string data)
         {
-            SendData(data as byte[]);
+            return BuildRespose(Encoder.GetBytes(data));
         }
-        protected void SendData(byte[] data)
+        public unsafe static byte[] BuildRespose(byte[] data)
         {
-            wsStream.WriteByte(129);
-            if (data.Length > UInt16.MaxValue)
+            var dataOffset = 2;
+            if (data.Length > UInt16.MaxValue) dataOffset += 8;
+            else if (data.Length > 125) dataOffset += 2;
+            var resp = new byte[data.Length + dataOffset];
+            resp[0] = 129;
+            if (dataOffset == 10)
             {
-                wsStream.WriteByte(127);
-                wsStream.WriteInt64((ulong)data.Length);
+                resp[1] = 127;
+                fixed (byte* len = &resp[2])
+                    *(ulong*)len = (ulong)data.Length;
+                // Buffer.BlockCopy(BitConverter.GetBytes(),0,resp,2,8);
             }
-            else if (data.Length > 125)
+            else if (dataOffset == 4)
             {
-                wsStream.WriteByte(126);
-                wsStream.WriteInt16((ushort)data.Length);
+                resp[1] = 126;
+                fixed (byte* len = &resp[2])
+                    *(ushort*)len = (ushort)data.Length;
+                // Buffer.BlockCopy(BitConverter.GetBytes((ushort)data.Length), 0, resp, 2, 2);
             }
-            else {
-                wsStream.WriteByte((byte)data.Length);
-            }
-            wsStream.Write(data);
-            wsStream.Flush();
+            else
+                resp[1] = (byte)data.Length;
+            Buffer.BlockCopy(data, 0, resp, dataOffset, data.Length);
+            return resp;
         }
         public void Send(byte[] data)
         {
-            lock(locker) 
-                sender = sender.ContinueWith(q => { SendData(data); });
+            data = BuildRespose(data);
+            wsStream.WriteAsync(data,0,data.Length);
+        }
+        public void SendRaw(byte[] data)
+        {
+            wsStream.WriteAsync(data, 0, data.Length);
         }
     }
 

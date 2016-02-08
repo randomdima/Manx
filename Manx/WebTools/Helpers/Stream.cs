@@ -13,9 +13,9 @@ namespace WebTools.Helpers
         private static int RBS = new TcpClient().ReceiveBufferSize;
        private static int SBS = new TcpClient().SendBufferSize;
         private static Encoding Encoder = new UTF8Encoding();
-        public static byte[] Read(this Stream stream, int length)
+        public static byte[] Read(this Stream stream, int length,int XL=0)
         {
-            var bytes = new byte[length];
+            var bytes = new byte[length+XL];
             while (length > 0)
             {
                 var loaded = stream.Read(bytes, bytes.Length - length, Math.Min(RBS, length));
