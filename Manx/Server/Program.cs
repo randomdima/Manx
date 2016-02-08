@@ -18,7 +18,7 @@ namespace Server.Tools
         {
             using (HttpServer server = new HttpServer(port:12397))
             {
-                var files = server.AddFolder("..\\..\\Scripts", "*.js");
+                var files = server.AddFolder("Scripts", "*.js");
                 server.Add(new HtmlFile("", "Manx", files));
 
                 var WS = new WSHandler();
