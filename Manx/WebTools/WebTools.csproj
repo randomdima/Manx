@@ -22,7 +22,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -58,22 +58,23 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="RPCServer\Client.cs" />
-    <Compile Include="RPCServer\HandlerBuilder.cs" />
-    <Compile Include="RPCServer\RPCMember.cs" />
-    <Compile Include="RPCServer\RPCStatus.cs" />
-    <Compile Include="RPCServer\Server.cs" />
+    <Compile Include="RPC\JsonSerializer.cs" />
+    <Compile Include="RPC\RPCMessage.cs" />
+    <Compile Include="RPC\RPCSocketClient.cs" />
+    <Compile Include="RPC\HandlerBuilder.cs" />
+    <Compile Include="RPC\RPCSocketHandler.cs" />
     <Compile Include="WebSocket\WSClient.cs" />
     <Compile Include="WebSocket\WSHandler.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="RPCServer\Client.js" />
+    <Content Include="RPC\Client.js" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -1,60 +1,61 @@
-﻿var pos;
-window.onload = function () {
+﻿window.onload = function () {
     document.body.style.overflow = 'hidden';
     document.body.style.padding = 0;
     document.body.style.margin = 0;
-    var cnv = document.createElement('canvas');
-    cnv.style.overflow = 'hidden';
-    cnv.style.width = '100%';
-    cnv.style.height = '100%';
-    document.body.appendChild(cnv);
-    cnv.width = cnv.offsetWidth;
-    cnv.height = cnv.offsetHeight;
-    var context = cnv.getContext('2d');
+    window.canvas = document.createElement('canvas');
+    canvas.style.overflow = 'hidden';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    document.body.appendChild(canvas);
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    window.context = canvas.getContext('2d');
 
-    var socket = new WebSocket('ws://'+window.location.host+'/ws');
-   // var socket = new WebSocket('ws://localhost:8181');
-    var color = getRandomColor();
- 
-    socket.onmessage = function (e) {
-        //var now = new Date(); now = now.getMinutes()*60*1000+now.getSeconds()*1000 + now.getMilliseconds();
-        //var parts = e.data.split(' ', 5);
-        //var p1 = parseInt(parts[0]);
-        //var p2 = parseInt(parts[1]);
-        //var p3 = parseInt(parts[2]);
-        //var p4 = parseInt(parts[3]);
-        //console.log('       '+(p3 - p4) + '       ' + (p2 - p3) + '     ' + (p1 - p2) + '     ' + (now - p1));
-
-        //var pos = JSON.parse(parts[4]);
-        var pos = JSON.parse(e.data);
-        context.beginPath();
-        context.lineWidth = 10;
-        context.lineCap = "round";
-        context.strokeStyle = pos.c;
-        context.moveTo(pos.lx, pos.ly);
-        context.lineTo(pos.x, pos.y);
-        context.stroke();
-    };
-
-    var lastp;
-    socket.onopen=function(){
-        document.body.addEventListener('mousedown', function (e) {
-            lastp = e;
-            //var now = new Date(); now = now.getMinutes() * 60 * 1000 + now.getSeconds() * 1000 + now.getMilliseconds();
-            socket.send(JSON.stringify({ x: e.x, y: e.y, lx: e.x - 1, ly: e.y - 1, c: color }));
-        });
-        document.body.addEventListener('mousemove', function (e) {
-            if (!e.buttons) return;
-            //  var now = new Date(); now = now.getMinutes() * 60 * 1000 + now.getSeconds() * 1000 + now.getMilliseconds();
-            socket.send(JSON.stringify({ x: e.x, y: e.y, lx: lastp.x, ly: lastp.y, c: color }));
-            lastp = e;
-        });
-    }
-
+    var socket = new RPCClient('ws://'+window.location.host+'/ws');
+    socket.onError(function (e) { alert(e); });
+    socket.onStart(start);
+    socket.start();
     window.onresize = function () {
-        cnv.width = cnv.offsetWidth;
-        cnv.height = cnv.offsetHeight;
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
     }
+}
+
+function start(world) {
+    window.world = world;
+    draw(world);
+
+    world.onItemAdded(function (item) {
+        world.Items.push(item);
+        draw(world);
+    });
+    world.onItemRemoved(function (item) {
+        var i = world.Items.indexOf(item);
+        world.Items.splice(i, 1);
+        draw(world);
+    });
+    window.onclick = function (e) {
+        for (var q = 0; q < world.Items.length; q++) {
+            var i = world.Items[q];
+            if (((e.x - i.X) * (e.x - i.X) + (e.y - i.Y) * (e.y - i.Y)) < i.Size * i.Size) {
+                world.Remove(i);
+                return;
+            }
+        }
+        world.Add(e.x,e.y,Math.round(Math.random()*50)+20,getRandomColor());
+    }
+}
+function draw(world) {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    for (var q = 0; q < world.Items.length; q++)
+        drawItem(world.Items[q]);
+}
+
+function drawItem(item) {
+    context.beginPath();
+    context.arc(item.X, item.Y, item.Size, 0, 2 * Math.PI, false);
+    context.fillStyle = item.Color;
+    context.fill();
 }
 
 function getRandomColor() {

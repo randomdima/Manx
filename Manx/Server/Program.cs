@@ -16,33 +16,67 @@ namespace Server.Tools
     {
         static void Main(string[] args)
         {
-            System.Diagnostics.Process.GetCurrentProcess().PriorityClass = System.Diagnostics.ProcessPriorityClass.High;
+            JsonObjectStorage.Types.Add(typeof(World));
+            JsonObjectStorage.Types.Add(typeof(Child));
+            System.Diagnostics.Process.GetCurrentProcess().PriorityClass = System.Diagnostics.ProcessPriorityClass.RealTime;
             using (HttpServer server = new HttpServer(port:12397))
             {
                 var files = server.AddFolder("..//..//Scripts", "*.js");
+                files.Add(server.Add("wsClient.js", RPCSocketHandler.wsClient));
                 server.Add(new HtmlFile("", "Manx", files));
 
-                var WS = new WSHandler();
-                server.Add("ws",WS);
-                server.Start();
+
+                var global = new World();
+                global.Add(100, 100,10, "green");
+             //   global.Add(200, 100, 20, "red");
+             //   global.Add(200, 200, 30, "blue");
+                var WS = new RPCSocketHandler();
                 WS.OnConnect += q =>
                 {
-                    q.OnMessage += m => {
-                        var qm = m.Replace("\"x\"", "_y").Replace("\"y\"", "_x").Replace("\"ly\"", "_lx").Replace("\"lx\"", "_ly")
-                                   .Replace("_x", "\"x\"").Replace("_y", "\"y\"").Replace("_lx", "\"lx\"").Replace("_ly", "\"ly\"");
-                        WS.Send(m);
-                        WS.Send(qm);
-                    };
+                    (q as RPCSocketClient).Start(global);
                 };
+                server.Add("ws",WS);
+                server.Start();
                 Console.WriteLine("Listening...");
                 Console.ReadLine();
             }
         }
+    }
 
-        [RPCMember]
-        public static void SetPosition(int x,int y)
+
+    class World
+    {
+        public List<Child> Items {get;set;}
+        public event Action<Child> ItemAdded;
+        public event Action<Child> ItemRemoved;
+        public World()
         {
-           // wsServer.FireEvent("PositionChanged",new {x,y});
+            Items = new List<Child>();
+        }
+        public void Add(int X, int Y,int Size, string Color)
+        {
+            var newone = new Child() { X = X, Y = Y, Size = Size, Color = Color };
+            Items.Add(newone);
+            if (ItemAdded != null) ItemAdded(newone);
+        }
+        public void Remove(Child Item)
+        {
+            Items.Remove(Item);
+            if (ItemRemoved != null) ItemRemoved(Item);
+        }
+    }
+    class Child
+    {
+        public int X { get; set; }
+        public int Y { get; set; }
+        public int Size { get; set; }
+        public string Color { get; set; }
+        public event Action<int,int> OnMove;
+        public void MoveTo(int X, int Y)
+        {
+            this.X = X;
+            this.Y = Y;
+            if (OnMove != null) OnMove(X, Y);
         }
     }
 }

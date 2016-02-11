@@ -63,22 +63,24 @@ namespace WebTools.Properties {
         /// <summary>
         ///   Looks up a localized string similar to function wsClient(url) {
         ///    var me = this;
+        ///    var eventHandlers = {};
         ///    var handlers = new Array(100);
         ///    var pending = new Array();
         ///    var socket = null;
         ///    var open = false;
         ///    var firstEmpty = 0;
         ///
+        ///    var eventHandler = function (key, data) {
+        ///        var h = eventHandlers[key];
+        ///        if (h) h(data);
+        ///    }
+        ///
         ///    var init = function () {
         ///        socket = new WebSocket(url);
         ///        socket.onopen = function () {
         ///            open = true;
         ///            var req = null;
-        ///            while (req = pending.pop()) me.exec.apply(me, req);
-        ///        };
-        ///        socket.onclose = function (event) {
-        ///            open = false;
-        ///            / [rest of string was truncated]&quot;;.
+        ///            whi [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string Client {
             get {
