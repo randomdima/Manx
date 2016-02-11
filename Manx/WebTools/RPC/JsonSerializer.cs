@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Serialization;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -8,31 +9,54 @@ using System.Web.Script.Serialization;
 
 namespace WebTools.RPC
 {
+    public class JsonRefTypeResolvert : JavaScriptTypeResolver
+    {
+        public static List<Type> TypeList = new List<Type>();
+      
+        public static void AddType(params Type[] Ts)
+        {
+            foreach (var T in Ts)
+            {
+                TypeList.Add(T);
+            }
+        }
+        private Dictionary<int, object> Storage;
+        public JsonRefTypeResolvert(Dictionary<int, object> Storage)
+        {
+            this.Storage = Storage;
+        }
+        public override Type ResolveType(string id)
+        {
+            object x;
+            if (Storage.TryGetValue(int.Parse(id), out x))
+                return x.GetType();
+            return null;
+        }
+
+        public override string ResolveTypeId(Type type)
+        {
+            return null;
+        }
+    }
     public class JsonRefSerializer:JavaScriptSerializer
     {
-        public static readonly JavaScriptSerializer simple = new JavaScriptSerializer();
-        private readonly JsonObjectStorage ObjectStorage;
-        private readonly JsonTypeStorage TypeStorage;
-        public JsonRefSerializer(RPCSocketClient Client)
+        public static readonly JavaScriptSerializer simple = new JavaScriptSerializer();        
+        public JsonRefSerializer(RPCSocketClient Client, Dictionary<int, object> Storage) : base(new JsonRefTypeResolvert(Storage))
         {
-            ObjectStorage = new JsonObjectStorage();
-            TypeStorage = new JsonTypeStorage();
             RegisterConverters(new List<JavaScriptConverter>() {
-                TypeStorage,
-                ObjectStorage,
+                new JsonObjectStorage(Storage),
+                new JsonTypeStorage(),
                 new JsonMessageConverter(Client) });
-        }
-        public object GetObject(int key)
-        {
-            return ObjectStorage.Get(key);
         }
     }
 
     public class JsonObjectStorage : JavaScriptConverter
     {
-        private Dictionary<int, object> Storage = new Dictionary<int, object>();
-        public static List<Type> Types = new List<Type>() { typeof(object) };
-       
+        private Dictionary<int, object> Storage;
+        public JsonObjectStorage(Dictionary<int, object> Storage)
+        {
+            this.Storage = Storage;
+        }
         public object Get(int key)
         {
             object obj;
@@ -47,8 +71,6 @@ namespace WebTools.RPC
         }
         public override IDictionary<string, object> Serialize(object obj, JavaScriptSerializer serializer)
         {
-            if (!Types.Contains(obj.GetType()))
-                return obj as IDictionary<string, object>;
             if (obj == null) return null;
 
             var id = RuntimeHelpers.GetHashCode(obj);
@@ -69,7 +91,7 @@ namespace WebTools.RPC
         }
         public override IEnumerable<Type> SupportedTypes
         {
-            get { return JsonObjectStorage.Types; } }
+            get { return JsonRefTypeResolvert.TypeList; } }
         }
     
     public class JsonTypeStorage : JavaScriptConverter
@@ -140,5 +162,30 @@ namespace WebTools.RPC
             get { return Types; }
         }
     }
+
+
+    public class StorageReferenceResolver : IReferenceResolver
+    {
+        public void AddReference(object context, string reference, object value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetReference(object context, object value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsReferenced(object context, object value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public object ResolveReference(object context, string reference)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
 
 }

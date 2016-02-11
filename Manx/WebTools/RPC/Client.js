@@ -46,22 +46,13 @@ function RPCClient(url) {
         
         return obj;
     }
-    var derefObject = function (obj) {
-        if (typeof (obj) != 'object') return obj;
-        if (obj._id != null) return { _id: obj._id };
-
-        for (var q in obj)
-            obj[q] = derefObject(obj[q]);
-
-        return obj;
-    }
     var onEvent = function (data) {
         if (!data.obj)
             handlers[data.member].apply(this, data.args);
         else data.obj.fireEvent(data.member, data.args, true);
     }
     me.send = function (data) {
-        socket.send(JSON.stringify(derefObject(data)));
+        socket.send(JSON.stringify(data));
     }
     me.onError = function (fn) {
         handlers.Error = fn;
@@ -78,6 +69,7 @@ function CreateDynamicClass(type, socket) {
             this[q] = data[q];
         return this;
     }
+    t.prototype.toJSON = function () { return { __type: this._id }; }
     t.prototype._type = type.name;
     t.prototype.fireEvent = function (name, args, local) {
         if(local)

@@ -16,8 +16,7 @@ namespace Server.Tools
     {
         static void Main(string[] args)
         {
-            JsonObjectStorage.Types.Add(typeof(World));
-            JsonObjectStorage.Types.Add(typeof(Child));
+            JsonRefTypeResolvert.AddType(typeof(World), typeof(Child));
             System.Diagnostics.Process.GetCurrentProcess().PriorityClass = System.Diagnostics.ProcessPriorityClass.RealTime;
             using (HttpServer server = new HttpServer(port:12397))
             {
