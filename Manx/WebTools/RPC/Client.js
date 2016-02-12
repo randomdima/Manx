@@ -1,14 +1,14 @@
 ﻿window.RPCMessageType = {
-    Invoke:0,
+    Invoke:2,
     Bind:1,
-    Event:2
+    Event:0
 }
 
 function RPCClient(url) {
     var me = this;
     var socket = null;
     var handlers = {};
-    var types = {};
+    var types = new Array(100);
     var objects = {};
 
     me.start = function () {
@@ -19,7 +19,7 @@ function RPCClient(url) {
             window.setTimeout(function () { me.start() }, 1000);
         };
         socket.onmessage = function (event) {
-            var data = refObject(JSON.parse(event.data));           
+            var data = refObject(eval('('+event.data+')'));           
             switch (data.type) {
                 case RPCMessageType.Event:
                     return onEvent(data);
@@ -31,14 +31,14 @@ function RPCClient(url) {
     };
     var refObject = function (obj) {
         if (typeof (obj) != 'object') return obj;
-        if (obj._id!=null) {
-            var exist = objects[obj._id];
+        if (obj.$id != null) {
+            var exist = objects[obj.$id];
             if (exist) return exist;
 
-            var t = obj._type;
-            delete obj._type;
-            if (!types[t.name]) types[t.name] = CreateDynamicClass(t, me);            
-            objects[obj._id] = obj = new types[t.name](obj);
+            var t = obj.$type;
+            delete obj.$type;
+            if (!types[t.id]) types[t.id] = CreateDynamicClass(t, me);            
+            objects[obj.$id] = obj = new types[t.id](obj);
         }
 
         for (var q in obj) 
@@ -69,8 +69,8 @@ function CreateDynamicClass(type, socket) {
             this[q] = data[q];
         return this;
     }
-    t.prototype.toJSON = function () { return { __type: this._id }; }
-    t.prototype._type = type.name;
+    t.prototype.toJSON = function () { return this.$id; }
+    //t.prototype._type = type.name;
     t.prototype.fireEvent = function (name, args, local) {
         if(local)
             this.handlers[name].apply(this, args);

@@ -23,7 +23,7 @@ namespace WebTools.RPC
     {
         public readonly JsonRefSerializer Json;
         public RPCSocketClient(Stream stream) : base(stream) {
-            Json = new JsonRefSerializer(this,new Dictionary<int, object>());
+            Json = new JsonRefSerializer(this);
         }
         public void Start(object root)
         {

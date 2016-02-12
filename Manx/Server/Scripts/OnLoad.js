@@ -23,6 +23,7 @@
 
 function start(world) {
     window.world = world;
+  //  world.Items[2].MoveTo(3, 4);
     draw(world);
 
     world.onItemAdded(function (item) {

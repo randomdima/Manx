@@ -1,22 +1,17 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
 using WebTools.Helpers;
 
 namespace WebTools.RPC
 {
-    public enum MessageType
-    {
-        FireEvent,
-        BindEvent,
-        Invoke
-    }
     public abstract class RPCMessage
     {
+        [JsonIgnore]
         public RPCSocketClient Client;
         public abstract void Process();
         public void Send()
@@ -73,7 +68,7 @@ namespace WebTools.RPC
             {
                 if (res.Length <= q)
                     res[q] = GetDefaultValue(Params[q].ParameterType) ?? Params[q].DefaultValue;
-                else res[q] = Client.Json.ConvertToType(args[q], Params[q].ParameterType) ?? Params[q].DefaultValue;
+                //else res[q] = Client.Json.ConvertToType(args[q], Params[q].ParameterType) ?? Params[q].DefaultValue;
             }
             args = res;
         }

@@ -16,7 +16,7 @@ namespace Server.Tools
     {
         static void Main(string[] args)
         {
-            JsonRefTypeResolvert.AddType(typeof(World), typeof(Child));
+            //JsonRefTypeResolvert.AddType(typeof(World), typeof(Child));
             System.Diagnostics.Process.GetCurrentProcess().PriorityClass = System.Diagnostics.ProcessPriorityClass.RealTime;
             using (HttpServer server = new HttpServer(port:12397))
             {
@@ -42,8 +42,7 @@ namespace Server.Tools
         }
     }
 
-
-    class World
+    class World : IRefObject
     {
         public List<Child> Items {get;set;}
         public event Action<Child> ItemAdded;
@@ -64,7 +63,7 @@ namespace Server.Tools
             if (ItemRemoved != null) ItemRemoved(Item);
         }
     }
-    class Child
+    class Child : IRefObject
     {
         public int X { get; set; }
         public int Y { get; set; }

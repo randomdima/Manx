@@ -1,191 +1,182 @@
-﻿using Newtonsoft.Json.Serialization;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
 
 namespace WebTools.RPC
 {
-    public class JsonRefTypeResolvert : JavaScriptTypeResolver
+    public class JsonRefSerializer
     {
-        public static List<Type> TypeList = new List<Type>();
-      
-        public static void AddType(params Type[] Ts)
+        public JsonSerializer JSS;
+        public JsonRefSerializer(RPCSocketClient Client)
         {
-            foreach (var T in Ts)
+            var Settings = new JsonSerializerSettings();
+            Settings.NullValueHandling = NullValueHandling.Ignore;
+            Settings.Converters.Add(new JsonTypeConverter());
+            Settings.Converters.Add(new JsonRPCMessageConverter() { Client = Client });
+            Settings.Converters.Add(new JsonRefConverter());
+           
+            JSS = JsonSerializer.Create(Settings);
+        }
+        public T Deserialize<T>(string json)
+        {
+            using (var R = new StringReader(json))
+            using (var RR = new JsonTextReader(R))
+                return JSS.Deserialize<T>(RR);
+        }
+        public string Serialize(object obj)
+        {
+            
+            using (var R = new StringWriter())
+            using (var RR = new JsonTextWriter(R))
             {
-                TypeList.Add(T);
+                RR.QuoteName = false;
+                JSS.Serialize(RR, obj);
+                return R.ToString();
             }
         }
-        private Dictionary<int, object> Storage;
-        public JsonRefTypeResolvert(Dictionary<int, object> Storage)
+    }
+    public interface IRefObject
+    {
+    }
+    public class JsonRefConverter : JsonConverter
+    {
+        protected Dictionary<int, object> Storage = new Dictionary<int, object>();
+        public override bool CanConvert(Type objectType)
         {
-            this.Storage = Storage;
+            return typeof(object).IsAssignableFrom(objectType);
         }
-        public override Type ResolveType(string id)
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            object x;
-            if (Storage.TryGetValue(int.Parse(id), out x))
-                return x.GetType();
+            if (existingValue is int)
+            {
+                object x;
+                Storage.TryGetValue((int)existingValue, out x);
+                return x;
+            }
             return null;
         }
 
-        public override string ResolveTypeId(Type type)
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
-            return null;
-        }
-    }
-    public class JsonRefSerializer:JavaScriptSerializer
-    {
-        public static readonly JavaScriptSerializer simple = new JavaScriptSerializer();        
-        public JsonRefSerializer(RPCSocketClient Client, Dictionary<int, object> Storage) : base(new JsonRefTypeResolvert(Storage))
-        {
-            RegisterConverters(new List<JavaScriptConverter>() {
-                new JsonObjectStorage(Storage),
-                new JsonTypeStorage(),
-                new JsonMessageConverter(Client) });
+            var key = RuntimeHelpers.GetHashCode(value);
+            if (Storage.ContainsKey(key))
+            {
+                writer.WriteValue(key);
+                return;
+            } 
+            Storage.Add(key, value);
+            Type type = value.GetType();
+            writer.WriteStartObject();
+            writer.WritePropertyName("$id");
+            writer.WriteValue(key);
+
+            writer.WritePropertyName("$type");
+            serializer.Serialize(writer, type);
+
+            foreach (PropertyInfo prop in type.GetProperties())
+            {
+                object propVal = prop.GetValue(value, null);
+                if (propVal != null)
+                {
+                    writer.WritePropertyName(prop.Name);
+                   // writer.WriteValue(propVal);
+                    serializer.Serialize(writer,propVal);
+                }
+            }
+            writer.WriteEndObject();
         }
     }
 
-    public class JsonObjectStorage : JavaScriptConverter
+    public class JsonTypeConverter : JsonConverter
     {
-        private Dictionary<int, object> Storage;
-        public JsonObjectStorage(Dictionary<int, object> Storage)
+        protected List<Type> Types = new List<Type>();
+        public override bool CanConvert(Type objectType)
         {
-            this.Storage = Storage;
+            return typeof(Type).IsAssignableFrom(objectType);
         }
-        public object Get(int key)
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            object obj;
-            Storage.TryGetValue(key, out obj);
+            throw new NotImplementedException();
+        }
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            var type = value as Type;
+            var I=Types.IndexOf(type);
+            if (I >= 0) writer.WriteValue(I);
+            else
+            {
+                Types.Add(type);
+                writer.WriteStartObject();
+                writer.WritePropertyName("id");
+                writer.WriteValue(Types.Count - 1);
+                writer.WritePropertyName("methods");
+                writer.WriteStartArray();
+                foreach (var M in type.GetMethods())
+                    writer.WriteValue(M.Name);
+                writer.WriteEndArray();
+
+                writer.WritePropertyName("events");
+                writer.WriteStartArray();
+                foreach (var M in type.GetEvents())
+                    writer.WriteValue(M.Name);
+                writer.WriteEndArray();
+                writer.WriteEndObject();
+            }
+        }
+    }
+
+    public class JsonRPCMessageConverter : JsonConverter
+    {
+        List<Type> MessageType = new List<Type>() { typeof(RPCEventMessage),typeof(RPCBindMessage),typeof(RPCInvokeMessage) };
+        public RPCSocketClient Client { get; set; }
+        public override bool CanConvert(Type objectType)
+        {
+           return typeof(RPCMessage).IsAssignableFrom(objectType);
+        }
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            JObject jObject = JObject.Load(reader);
+
+            var type = MessageType[jObject.Value<int>("type")];
+            var obj = Activator.CreateInstance(type) as RPCMessage;
+            obj.Client = Client;
+            // Populate the object properties
+            serializer.Populate(jObject.CreateReader(), obj);
+
             return obj;
         }
-        public override object Deserialize(IDictionary<string, object> dictionary, Type type, JavaScriptSerializer serializer)
-        {
-            object key = 0;
-            if (!dictionary.TryGetValue("_id", out key)) return serializer.ConvertToType(dictionary, type);
-            return Get((int)key);
-        }
-        public override IDictionary<string, object> Serialize(object obj, JavaScriptSerializer serializer)
-        {
-            if (obj == null) return null;
 
-            var id = RuntimeHelpers.GetHashCode(obj);
-            var res=new Dictionary<string,object>();
-            res.Add("_id", id); 
-            if (!Storage.ContainsKey(id))
-                Storage.Add(id, obj);
-            else return res;
-            res.Add("_type", obj.GetType());
-            var props = obj.GetType().GetProperties();
-            foreach (var p in props)
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {           
+            Type type = value.GetType();
+            writer.WriteStartObject();
+
+            writer.WritePropertyName("type");
+            serializer.Serialize(writer, MessageType.IndexOf(type));
+            foreach (PropertyInfo prop in type.GetProperties())
             {
-                var v = p.GetValue(obj);
-                if (v != null)
-                    res.Add(p.Name, v);
+                object propVal = prop.GetValue(value, null);
+                if (propVal != null)
+                {
+                    writer.WritePropertyName(prop.Name);
+                    // writer.WriteValue(propVal);
+                    serializer.Serialize(writer, propVal);
+                }
             }
-            return res;
-        }
-        public override IEnumerable<Type> SupportedTypes
-        {
-            get { return JsonRefTypeResolvert.TypeList; } }
-        }
-    
-    public class JsonTypeStorage : JavaScriptConverter
-    {
-        private Dictionary<string, Type> Storage = new Dictionary<string, Type>();
-
-        public Type Get(string key)
-        {
-            Type obj;
-            Storage.TryGetValue(key, out obj);
-            return obj;
-        }
-        public override object Deserialize(IDictionary<string, object> dictionary, Type type, JavaScriptSerializer serializer)
-        {
-            return Storage[(string)dictionary["type"]];
-        }
-        public override IDictionary<string, object> Serialize(object obj, JavaScriptSerializer serializer)
-        {
-            var t = obj as Type;
-            if (t == null) return null;
-            var res = new Dictionary<string, object>();
-            res.Add("name", t.Name);
-            if (Storage.ContainsKey(t.Name))
-                return res;
-            Storage.Add(t.Name, t);
-            res.Add("methods", t.GetMethods().Select(q => q.Name).ToArray());
-            res.Add("events", t.GetEvents().Select(q => q.Name).ToArray());
-            return res;
-        }
-
-        public override IEnumerable<Type> SupportedTypes
-        {
-            get { return new List<Type>() { typeof(Type) }; }
+            writer.WriteEndObject();
         }
     }
-
-    public class JsonMessageConverter : JavaScriptConverter
-    {
-        protected static List<Type> Types = new List<Type>() { typeof(RPCInvokeMessage), typeof(RPCBindMessage), typeof(RPCEventMessage), typeof(RPCMessage) };
-        protected RPCSocketClient Client;
-        public JsonMessageConverter(RPCSocketClient Client){
-         this.Client=Client;
-        }
-        public override object Deserialize(IDictionary<string, object> dictionary, Type type, JavaScriptSerializer serializer)
-        {
-            var T = Types[(int)dictionary["type"]];
-            RPCMessage M = JsonRefSerializer.simple.ConvertToType(dictionary, T) as RPCMessage;
-            M.Client = Client;
-            return M;
-        }
-        public override IDictionary<string, object> Serialize(object obj, JavaScriptSerializer serializer)
-        {
-            if (obj == null) return null;
-            var res = new Dictionary<string, object>();
-            var props = obj.GetType().GetProperties();
-            foreach (var p in props)
-            {
-                var v = p.GetValue(obj);
-                if (v != null)
-                    res.Add(p.Name, v);
-            }
-            res.Add("type", Types.IndexOf(obj.GetType()));
-            return res;
-        }
-
-        public override IEnumerable<Type> SupportedTypes
-        {
-            get { return Types; }
-        }
-    }
-
-
-    public class StorageReferenceResolver : IReferenceResolver
-    {
-        public void AddReference(object context, string reference, object value)
-        {
-            throw new NotImplementedException();
-        }
-
-        public string GetReference(object context, object value)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool IsReferenced(object context, object value)
-        {
-            throw new NotImplementedException();
-        }
-
-        public object ResolveReference(object context, string reference)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-
 }
