@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -11,7 +10,6 @@ namespace WebTools.RPC
 {
     public abstract class RPCMessage
     {
-        [JsonIgnore]
         public RPCSocketClient Client;
         public abstract void Process();
         public void Send()

@@ -33,10 +33,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.8.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Web" />
@@ -47,6 +43,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Binary\Basic.cs" />
+    <Compile Include="Binary\Array.cs" />
+    <Compile Include="Binary\Object.cs" />
+    <Compile Include="Binary\IBinaryConverter.cs" />
     <Compile Include="Helpers\Exception.cs" />
     <Compile Include="HttpServer\File.cs" />
     <Compile Include="HttpServer\HttpServer.cs" />
@@ -61,7 +61,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="RPC\JsonSerializer.cs" />
+    <Compile Include="RPC\Ref.cs" />
     <Compile Include="RPC\RPCMessage.cs" />
     <Compile Include="RPC\RPCSocketClient.cs" />
     <Compile Include="RPC\HandlerBuilder.cs" />
@@ -71,9 +71,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="RPC\Client.js" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">

@@ -18,8 +18,8 @@ function RPCClient(url) {
             if (event.wasClean) return;
             window.setTimeout(function () { me.start() }, 1000);
         };
-        socket.onmessage = function (event) {
-            var data = refObject(eval('('+event.data+')'));           
+        socket.onbinarymessage = function (event) {
+            var data = deReference(eval('('+event.data+')'));           
             switch (data.type) {
                 case RPCMessageType.Event:
                     return onEvent(data);
@@ -29,21 +29,22 @@ function RPCClient(url) {
             onEvent({name:'Error',args:['Onknown error']});
         };
     };
-    var refObject = function (obj) {
-        if (typeof (obj) != 'object') return obj;
+    var deReference = function (obj) {
+        if (obj == null || typeof (obj) != 'object') return obj;
+        if (obj.$ref != null) return objects[obj.$ref];
+        for (var q in obj)
+            obj[q] = deReference(obj[q]);
         if (obj.$id != null) {
-            var exist = objects[obj.$id];
-            if (exist) return exist;
-
             var t = obj.$type;
             delete obj.$type;
-            if (!types[t.id]) types[t.id] = CreateDynamicClass(t, me);            
-            objects[obj.$id] = obj = new types[t.id](obj);
+            if(t.length>5) {
+                t = eval('({' + t + '})');
+                types[t.id] = CreateDynamicClass(t, me);
+                t = t.id;
+            }
+            else t = parseInt(t);
+            objects[obj.$id] = obj = new types[t](obj);
         }
-
-        for (var q in obj) 
-            obj[q] = refObject(obj[q]);
-        
         return obj;
     }
     var onEvent = function (data) {
@@ -69,7 +70,7 @@ function CreateDynamicClass(type, socket) {
             this[q] = data[q];
         return this;
     }
-    t.prototype.toJSON = function () { return this.$id; }
+    t.prototype.toJSON = function () { return {$ref:this.$id}; }
     //t.prototype._type = type.name;
     t.prototype.fireEvent = function (name, args, local) {
         if(local)

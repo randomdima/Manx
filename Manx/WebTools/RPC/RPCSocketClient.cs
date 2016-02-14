@@ -10,6 +10,7 @@ using WebTools.WebSocket;
 using System.Reflection;
 using HandlerType = System.Func<System.Collections.Generic.Dictionary<string, object>, object>;
 using System.Collections;
+using WebTools.Binary;
 
 namespace WebTools.RPC
 {
@@ -21,9 +22,9 @@ namespace WebTools.RPC
 
     public class RPCSocketClient: WSClient 
     {
-        public readonly JsonRefSerializer Json;
+        protected BinaryConverter Converter;
         public RPCSocketClient(Stream stream) : base(stream) {
-            Json = new JsonRefSerializer(this);
+            Converter = new BinaryConverter();
         }
         public void Start(object root)
         {
@@ -31,15 +32,15 @@ namespace WebTools.RPC
         }
         public void Send(RPCMessage message)
         {
-            Send(Json.Serialize(message));
+            Send(Converter.Convert(message));
         }
 
         protected override void onMessage(object message)
         {
             try
             {
-                var msg = Json.Deserialize<RPCMessage>(message.ToString());
-                msg.Process();
+               var msg = Converter.Convert<RPCMessage>(message as byte[]);
+               msg.Process();
             }
             catch (Exception E)
             {

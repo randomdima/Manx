@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using WebTools.Binary;
 using WebTools.Helpers;
 
 namespace WebTools.WebSocket
@@ -35,7 +36,7 @@ namespace WebTools.WebSocket
         }
         
         protected Stream wsStream;      
-        public event Action<string> OnMessage;
+        public event Action<byte[]> OnMessage;
         public WSClient(Stream stream)
         {
             wsStream = stream;        
@@ -64,8 +65,8 @@ namespace WebTools.WebSocket
         }
         public void Listen()
         {
-            StringBuilder sb =new StringBuilder();
             byte[] buffer = new byte[StreamHelpers.RBS];
+            byte[] message=null;
             wsHeader header=null;
             int offset=0;
             int blockLoaded = 0;
@@ -76,20 +77,24 @@ namespace WebTools.WebSocket
                     bufferLoaded = wsStream.Read(buffer, offset = 0, StreamHelpers.RBS);
 
                 if (header == null)
-                    if((header=wsHeader.Parse(buffer,ref offset))==null) break;
+                {
+                    if ((header = wsHeader.Parse(buffer, ref offset)) == null) break;
+                    message = new byte[header.blockSize];
+                    blockLoaded = 0;
+                }
 
                 var xoff = offset;
-                while (offset<bufferLoaded && blockLoaded<header.blockSize)
-                    buffer[offset++] ^= header.mask[(blockLoaded++) % MaskSize];
-                sb.Append(StreamHelpers.Encoder.GetString(buffer, xoff, offset-xoff));
-
-                if (blockLoaded != header.blockSize) continue;
-                if (header.isFinal) {
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(onMessage), sb);
-                    sb = new StringBuilder();
+                while (offset < bufferLoaded && blockLoaded < header.blockSize)
+                {
+                    message[blockLoaded] ^= header.mask[blockLoaded % MaskSize];
+                    offset++;
+                    blockLoaded++;
                 }
-                blockLoaded = 0;
+                if (blockLoaded != header.blockSize) continue;
+                if (header.isFinal) 
+                    ThreadPool.QueueUserWorkItem(new WaitCallback(onMessage), message);                
                 header = null;
+                message = null;
             }
         }
         public void Handshake(byte[] request)
@@ -110,12 +115,7 @@ namespace WebTools.WebSocket
         }
         protected virtual void onMessage(object message)
         {
-            string msg = message.ToString();
-            if (OnMessage != null) OnMessage(msg.ToString());
-        }
-        public static byte[] BuildRespose(string data)
-        {
-            return BuildRespose(StreamHelpers.Encoder.GetBytes(data));
+            if (OnMessage != null) OnMessage(message as byte[]);
         }
         public static byte[] BuildRespose(byte[] data)
         {
