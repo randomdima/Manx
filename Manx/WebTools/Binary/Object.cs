@@ -9,29 +9,29 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace WebTools.Binary
-{
-    public interface IRefObject { }
+{   
     public class ObjectProvider : IConverterProvider
     {
-        public IBinaryConverter<T> GetConverter<T>(BinaryConverter Root)
+        public virtual IBinaryConverter GetConverter(Type type,BinaryConverter Root)
         {
-            return new ObjectConverter<T>(Root);
+            type= typeof(ObjectConverter<>).MakeGenericType(type);
+            return Activator.CreateInstance(type, new object[] { Root }) as IBinaryConverter;
         }
     }
-
-    
     public delegate T ReadDelegate<T>(byte[] buffer, ref int offset);
     public delegate void WriteDelegate<T>(byte[] buffer, T value, ref int offset);
     public class ObjectConverter<T>: IBinaryConverter<T>
     {
         protected BinaryConverter Root;
-        protected Func<T,int> _GetSize;
-        protected ReadDelegate<T> _Read;
-        protected WriteDelegate<T> _Write;
- 
+        private Func<T, int> _GetSize;
+        private ReadDelegate<T> _Read;
+        private WriteDelegate<T> _Write; 
         public ObjectConverter(BinaryConverter Root)
-        {
+        {           
             this.Root = Root;
+        }
+        public override void Init()
+        {
             var type = typeof(T);
             var value = Expression.Parameter(type, "v");
             var offset = Expression.Parameter(typeof(int).MakeByRefType(), "o");
@@ -45,13 +45,23 @@ namespace WebTools.Binary
             Reader.Add(Expression.Assign(ReaderObj, Expression.New(type)));
             foreach (var P in type.GetProperties())
             {
-                var converter = Expression.Constant(Root.GetConverterObj(P.PropertyType));
+                var converter = P.PropertyType.IsSealed ? Expression.Constant(Root.GetConverter(P.PropertyType)) : root;
                 var ct = converter.Value.GetType();
-                Sizer.Add(Expression.Call(converter, ct.GetMethod("GetSize"), Expression.Property(value, P)));
-                Writer.Add(Expression.Call(converter, ct.GetMethod("Write"), buffer, Expression.Property(value, P),offset));
-                Reader.Add(Expression.Assign(Expression.Property(ReaderObj, P), Expression.Call(converter, ct.GetMethod("Read"), buffer, offset)));
-            }
+                var method = ct.GetMethods().First(q => q.Name == "GetSize");
+                Sizer.Add(Expression.Call(converter, method, Expression.Property(value, P)));
 
+                method = ct.GetMethods().First(q => q.Name == "Write");
+                Writer.Add(Expression.Call(converter, method, buffer, Expression.Property(value, P), offset));
+
+                if (P.SetMethod != null)
+                {
+                    method = ct.GetMethods().First(q => q.Name == "Read");
+                    if (method.IsGenericMethod)
+                        method = method.MakeGenericMethod(P.PropertyType);
+                    Reader.Add(Expression.Assign(Expression.Property(ReaderObj, P), Expression.Call(converter, method, buffer, offset)));
+                }
+
+            }
             Expression exp;
             if (Sizer.Count == 0) exp = Expression.Constant(0);
             else if (Sizer.Count == 1)
@@ -63,30 +73,33 @@ namespace WebTools.Binary
                     exp = Expression.Add(exp, Sizer[q]);
             }
             _GetSize = Expression.Lambda<Func<T, int>>(exp, value).Compile();
-            _Write = Expression.Lambda<WriteDelegate<T>>(Expression.Block(Writer),buffer,value,offset).Compile();
+            if (Writer.Count == 0) Writer.Add(Expression.Constant(0));
+            _Write = Expression.Lambda<WriteDelegate<T>>(Expression.Block(Writer), buffer, value, offset).Compile();
             Reader.Add(ReaderObj);
-            _Read = Expression.Lambda<ReadDelegate<T>>(Expression.Block(new ParameterExpression[] { ReaderObj },Reader),buffer,offset).Compile();
+            _Read = Expression.Lambda<ReadDelegate<T>>(Expression.Block(new ParameterExpression[] { ReaderObj }, Reader), buffer, offset).Compile();
         }
-        public int GetSize(T value) {
-            int key = RuntimeHelpers.GetHashCode(value);
-            if (Root.ReferenceStorage.ContainsKey(key)) return 4;
-            Root.ReferenceStorage.Add(key, value);
-            return _GetSize(value)+4;
+        public override int GetSize(T value)
+        {
+            if (value == null) return 4;
+            var type = value.GetType();
+            if (type.IsSealed) return _GetSize(value);
+            return Root.GetSize(new BinaryTypeInfo(type)) + _GetSize(value);
         }
-        public T Read(byte[] buffer, ref int offset) {
-            var key=Root.Int32.Read(buffer, ref offset);
-            if (key > 0) return (T)Root.ReferenceStorage[key];
+        public override T Read(byte[] buffer, ref int offset)
+        {
+            var type = Root.Int32.Read(buffer,ref offset);
             return _Read(buffer, ref offset);
-
         }
-        public void Write(byte[] buffer, T value, ref int offset) {
-            int key = RuntimeHelpers.GetHashCode(value);
-            Root.Int32.Write(buffer, key, ref offset);
-            if (!Root.ReferenceStorage.ContainsKey(key))
+        public override void Write(byte[] buffer, T value, ref int offset)
+        {
+            if (value == null)
             {
-                Root.ReferenceStorage.Add(key, value);
-                _Write(buffer, value, ref offset);
-            }
+                Root.Int32.Write(buffer, 0, ref offset);
+                return;
+            } 
+            var type = value.GetType();
+            if (!type.IsSealed) Root.Write(buffer, new BinaryTypeInfo(type), ref offset);
+            _Write(buffer, value, ref offset);
         }
     }
 }

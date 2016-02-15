@@ -61,26 +61,53 @@ namespace WebTools.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to function wsClient(url) {
+        ///   Looks up a localized string similar to var BinaryTypes = {
+        ///    Type: { key: -1051447098 },
+        ///    Object: { key: -737641570 },
+        ///    Int: { key: -118636331 },
+        ///    String: { key: 1236129805 }
+        ///}
+        ///BinaryTypes.Type.Properties = { elementType: { Name: BinaryTypes.String, Type: BinaryTypes.Int } };
+        ///BinaryTypes.Type.Methods = { elementType: { Name: BinaryTypes.String, Type: BinaryTypes.Int } };
+        ///
+        ///function BinaryConverter() {
         ///    var me = this;
-        ///    var eventHandlers = {};
-        ///    var handlers = new Array(100);
-        ///    var pending = new Array();
-        ///    var socket = null;
-        ///    var open = false;
-        ///    var firstEmpty = 0;
-        ///
-        ///    var eventHandler = function (key, data) {
-        ///        var h = eventHandlers[key];
-        ///        if (h) h(data);
-        ///    }
-        ///
-        ///    var init = function () {
-        ///        socket = new WebSocket(url);
-        ///        socket.onopen = function () {
-        ///            open = true;
-        ///            var req = null;
-        ///            whi [rest of string was truncated]&quot;;.
+        ///    me.offset=0;
+        ///    me.buffer=null;
+        ///    me.view=null;
+        ///    me.Providers = [ArrayProvider,ObjectProvider [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string BinaryConvert {
+            get {
+                return ResourceManager.GetString("BinaryConvert", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to window.RPCMessageType = {
+        ///    Invoke:2,
+        ///    Bind:1,
+        ///    Event:0
+        ///}
+        ///function BinaryConverter() {
+        ///    var me = this;
+        ///    me.Int = {
+        ///        Read: function () {
+        ///        },
+        ///        Write: function () {
+        ///        }
+        ///    };
+        ///}
+        ///function ParseString(raw) {
+        ///    var len = raw.buffer[raw.offset++];
+        ///    var str = String.fromCharCode.apply(null, raw.buffer.slice(raw.offset, raw.offset+len));
+        ///    raw.offset += len;
+        ///    return str;
+        ///}
+        ///function ParseType(raw) {
+        ///    //Reading Methods
+        ///    var type = {
+        ///       [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string Client {
             get {

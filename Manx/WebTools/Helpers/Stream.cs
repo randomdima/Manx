@@ -93,15 +93,20 @@ namespace WebTools.Helpers
         }
 
 
-        public static byte[] Join(params byte[][] parts)
+        public static byte[] Join(IEnumerable<byte[]> parts)
         {
-            var res=new byte[parts.Sum(q => q.Length)];
+            var res = new byte[parts.Sum(q => q.Length)];
             var off = 0;
-            foreach (byte[] part in parts) {
+            foreach (byte[] part in parts)
+            {
                 Buffer.BlockCopy(part, 0, res, off, part.Length);
                 off += part.Length;
             }
             return res;
+        }
+        public static byte[] Join(params byte[][] parts)
+        {
+            return Join(parts as IEnumerable<byte[]>);
         }
         public static byte[] Join(params string[] parts)
         {

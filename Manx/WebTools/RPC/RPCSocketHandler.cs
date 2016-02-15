@@ -16,7 +16,7 @@ namespace WebTools.RPC
         {
             get
             {
-                return Properties.Resources.Client;
+                return Properties.Resources.BinaryConvert + Properties.Resources.Client;
             }
         }
 

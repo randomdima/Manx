@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using WebTools.Binary;
 using WebTools.HttpServer;
 using WebTools.RPC;
@@ -12,7 +13,6 @@ namespace Server.Tools
     {
         static void Main(string[] args)
         {
-            //JsonRefTypeResolvert.AddType(typeof(World), typeof(Child));
             System.Diagnostics.Process.GetCurrentProcess().PriorityClass = System.Diagnostics.ProcessPriorityClass.RealTime;
             using (HttpServer server = new HttpServer(port:12397))
             {
@@ -24,6 +24,7 @@ namespace Server.Tools
                 global.Add(100, 100,10, "green");
                 global.Add(200, 100, 20, "red");
                 global.Add(200, 200, 30, "blue");
+                global.Items.Add(global.Items[0]);
                 var WS = new RPCSocketHandler();
                 WS.OnConnect += q =>
                 {
@@ -31,7 +32,7 @@ namespace Server.Tools
                 };
                 server.Add("ws", WS);
                 server.Start();
-                Console.WriteLine("Listening...");
+                //Console.WriteLine("Listening...");
                 Console.ReadLine();
             }
         }

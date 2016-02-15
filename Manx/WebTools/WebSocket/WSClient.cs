@@ -66,6 +66,7 @@ namespace WebTools.WebSocket
         public void Listen()
         {
             byte[] buffer = new byte[StreamHelpers.RBS];
+            List<byte[]> fullmsg = new List<byte[]>();
             byte[] message=null;
             wsHeader header=null;
             int offset=0;
@@ -91,8 +92,17 @@ namespace WebTools.WebSocket
                     blockLoaded++;
                 }
                 if (blockLoaded != header.blockSize) continue;
-                if (header.isFinal) 
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(onMessage), message);                
+                if (header.isFinal)
+                {
+                    if (fullmsg.Count > 0)
+                    {
+                        fullmsg.Add(message);
+                        message = StreamHelpers.Join(fullmsg);
+                        fullmsg.Clear();
+                    }
+                    ThreadPool.QueueUserWorkItem(new WaitCallback(onMessage), message);
+                }
+                else fullmsg.Add(message);
                 header = null;
                 message = null;
             }
@@ -117,25 +127,33 @@ namespace WebTools.WebSocket
         {
             if (OnMessage != null) OnMessage(message as byte[]);
         }
-        public static byte[] BuildRespose(byte[] data)
+        protected static int GetResponseHeaderSize(int datasize)
         {
-            var dataOffset = 2;
-            if (data.Length > UInt16.MaxValue) dataOffset += 8;
-            else if (data.Length > 125) dataOffset += 2;
-            var resp = new byte[data.Length + dataOffset];
-            resp[0] = 129;
-            if (dataOffset == 10)
+            if (datasize > UInt16.MaxValue) return 10;
+            if (datasize > 125) return  4;
+            return 2;
+        }
+        protected static void WriteResponseHeader(byte[] buffer, int datasize)
+        {
+            buffer[0] = 130;//128 + 2 for binary data
+            if (datasize > UInt16.MaxValue)
             {
-                resp[1] = 127;
-                resp.WriteInt64((ulong)data.Length,2);
+                buffer[1] = 127;
+                buffer.WriteInt64((ulong)datasize, 2);
             }
-            else if (dataOffset == 4)
+            else if (datasize > 125)
             {
-                resp[1] = 126;
-                resp.WriteInt16((ushort)data.Length, 2);
+                buffer[1] = 126;
+                buffer.WriteInt16((ushort)datasize, 2);
             }
             else
-                resp[1] = (byte)data.Length;
+                buffer[1] = (byte)datasize;
+        }
+        public static byte[] BuildRespose(byte[] data)
+        {
+            var dataOffset = GetResponseHeaderSize(data.Length);
+            var resp = new byte[data.Length + dataOffset];
+            WriteResponseHeader(resp, data.Length);            
             Buffer.BlockCopy(data, 0, resp, dataOffset, data.Length);
             return resp;
         }

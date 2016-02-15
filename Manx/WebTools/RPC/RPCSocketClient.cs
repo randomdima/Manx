@@ -1,4 +1,4 @@
-﻿using System;
+﻿ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,15 +24,24 @@ namespace WebTools.RPC
     {
         protected BinaryConverter Converter;
         public RPCSocketClient(Stream stream) : base(stream) {
-            Converter = new BinaryConverter();
+            Converter = new BinaryConverter(true);
         }
         public void Start(object root)
         {
-            new RPCEventMessage() { Client = this, member = "Start", args = new object[] { root } }.Send();
+            Send(root);
+         //   new RPCEventMessage() { Client = this, member = "Start", args = new object[] { root } }.Send();
         }
-        public void Send(RPCMessage message)
+        public void Send(object message)
         {
-            Send(Converter.Convert(message));
+            var cnv = Converter.GetConverter(message);
+            Converter.PushRef();
+            var len = cnv.GetSize(message);
+            Converter.PopRef();
+            var offset = GetResponseHeaderSize(len);
+            var data = new byte[len + offset];
+            WriteResponseHeader(data, len);
+            cnv.Write(data, message,ref offset);
+            SendRaw(data);
         }
 
         protected override void onMessage(object message)

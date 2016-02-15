@@ -47,6 +47,8 @@
     <Compile Include="Binary\Array.cs" />
     <Compile Include="Binary\Object.cs" />
     <Compile Include="Binary\IBinaryConverter.cs" />
+    <Compile Include="Binary\RefObject.cs" />
+    <Compile Include="Binary\Type.cs" />
     <Compile Include="Helpers\Exception.cs" />
     <Compile Include="HttpServer\File.cs" />
     <Compile Include="HttpServer\HttpServer.cs" />
@@ -61,7 +63,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="RPC\Ref.cs" />
     <Compile Include="RPC\RPCMessage.cs" />
     <Compile Include="RPC\RPCSocketClient.cs" />
     <Compile Include="RPC\HandlerBuilder.cs" />
@@ -70,6 +71,7 @@
     <Compile Include="WebSocket\WSHandler.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Binary\BinaryConvert.js" />
     <Content Include="RPC\Client.js" />
   </ItemGroup>
   <ItemGroup>

@@ -9,41 +9,46 @@ namespace WebTools.Binary
 {
     public class ArrayProvider : IConverterProvider
     {
-        public IBinaryConverter<T> GetConverter<T>(BinaryConverter Root)
+        public IBinaryConverter GetConverter(Type type,BinaryConverter Root)
         {
-            var type = typeof(T);
             if (!typeof(IList).IsAssignableFrom(type)) return null; 
-            var el = type.GetGenericArguments()[0];
-            var AT = typeof(ArrayConverter<,>).MakeGenericType(type,el);
-            return Activator.CreateInstance(AT, new object[] { Root }) as IBinaryConverter<T>;
+            var el = type.GetElementType()??type.GetGenericArguments()[0];
+            var AT = typeof(ListConverter<,>).MakeGenericType(type, el);
+            return Activator.CreateInstance(AT, new object[] { Root }) as IBinaryConverter;
         }
     }
-    public class ArrayConverter<T,TE>:IBinaryConverter<T> where T : IList<TE>
+    public class ListConverter<T,TE>:IBinaryConverter<T> where T : IList<TE>
     {
-        public IBinaryConverter<TE> Converter { get; set; }
-        public ArrayConverter(BinaryConverter root) {
-            Converter = root.GetConverter<TE>();
-        }
-        public int GetSize(T value)
+        public BinaryConverter Converter { get; set; }
+        public ListConverter(BinaryConverter root)
         {
+            Converter = root;//.GetConverter<TE>();
+        }
+        public override int GetSize(T value)
+        {
+            if (value == null) return 1;
             int Size = 1;
             foreach(var E in value)
                 Size += Converter.GetSize(E);
             return Size;
         }
-        public void Write(byte[] buffer, T value, ref int offset)
+        public override void Write(byte[] buffer, T value, ref int offset)
         {
+            if (value == null)
+            {
+                buffer[offset++] = 0;
+                return;
+            }
             buffer[offset++] = (byte)value.Count;
             foreach (var E in value)
                 Converter.Write(buffer, E, ref offset);
         }
-
-        public T Read(byte[] buffer, ref int offset)
+        public override T Read(byte[] buffer, ref int offset)
         {
-            var O = (T) Activator.CreateInstance(typeof(T));
             var len = buffer[offset++];
-            while (len-- > 0)
-                O.Add(Converter.Read(buffer, ref offset));
+            var O = (T) Activator.CreateInstance(typeof(T),new object[]{len});
+            for (var q = 0; q < len; q++)
+                O[q]=Converter.Read<TE>(buffer, ref offset);
             return (T)O;
         }
     }
