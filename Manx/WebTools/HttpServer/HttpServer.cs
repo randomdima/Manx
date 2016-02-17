@@ -13,7 +13,14 @@ using WebTools.Helpers;
 namespace WebTools.HttpServer
 {
     public class HttpServer:IDisposable
-    {        
+    {
+        public static string Client
+        {
+            get
+            {
+                return Properties.Resources.Client_min;
+            }
+        }
         private TcpListener Listener;
         private Dictionary<string, IHttpHandler> Handlers;
         private Thread MainThread;
@@ -131,6 +138,14 @@ namespace WebTools.HttpServer
             if (!Path.StartsWith("/")) Path = "/" + Path;
             Handlers.Add(Path, Handler);
             return Handler;
+        }
+
+        public static string BuildClient(params string[] Path)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (var q in Path)
+                sb.AppendLine(JsFile.Combine(q));
+            return sb.ToString();
         }
     }
 }

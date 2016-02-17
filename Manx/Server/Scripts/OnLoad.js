@@ -22,6 +22,7 @@
 }
 
 function start(world) {
+    var socket = this;
     window.world = world;
   //  world.Items[2].MoveTo(3, 4);
     draw(world);
@@ -36,6 +37,7 @@ function start(world) {
         draw(world);
     });
     window.onclick = function (e) {
+        socket.send(''); return;
         for (var q = 0; q < world.Items.length; q++) {
             var i = world.Items[q];
             if (((e.x - i.X) * (e.x - i.X) + (e.y - i.Y) * (e.y - i.Y)) < i.Size * i.Size) {

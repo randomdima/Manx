@@ -24,23 +24,19 @@ namespace WebTools.RPC
     {
         protected BinaryConverter Converter;
         public RPCSocketClient(Stream stream) : base(stream) {
-            Converter = new BinaryConverter(true);
+            Converter = new BinaryConverter();
         }
         public void Start(object root)
         {
-            Send(root);
-         //   new RPCEventMessage() { Client = this, member = "Start", args = new object[] { root } }.Send();
+            new RPCEventMessage() { Client = this, member = "Start", args = new object[] { root } }.Send();
         }
         public void Send(object message)
         {
-            var cnv = Converter.GetConverter(message);
-            Converter.PushRef();
-            var len = cnv.GetSize(message);
-            Converter.PopRef();
+            var len = Converter.CheckSize(message);
             var offset = GetResponseHeaderSize(len);
             var data = new byte[len + offset];
             WriteResponseHeader(data, len);
-            cnv.Write(data, message,ref offset);
+            Converter.Write(data, message, ref offset);
             SendRaw(data);
         }
 
@@ -48,8 +44,9 @@ namespace WebTools.RPC
         {
             try
             {
-               var msg = Converter.Convert<RPCMessage>(message as byte[]);
-               msg.Process();
+                new RPCInvokeMessage() { Client = this, member = "Click" }.Send();
+               //var msg = Converter.Convert<RPCMessage>(message as byte[]);
+               //msg.Process();
             }
             catch (Exception E)
             {

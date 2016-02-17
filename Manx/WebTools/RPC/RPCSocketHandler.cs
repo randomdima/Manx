@@ -12,14 +12,6 @@ namespace WebTools.RPC
 {   
     public class RPCSocketHandler : WSHandler
     {
-        public static string wsClient
-        {
-            get
-            {
-                return Properties.Resources.BinaryConvert + Properties.Resources.Client;
-            }
-        }
-
         protected override WSClient CreateClient(Stream stream, byte[] request)
         {
             return new RPCSocketClient(stream);

@@ -43,13 +43,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Binary\Basic.cs" />
+    <Compile Include="Binary\Basic\Bool.cs" />
+    <Compile Include="Binary\Dictionary.cs" />
     <Compile Include="Binary\Array.cs" />
+    <Compile Include="Binary\Basic\String.cs" />
+    <Compile Include="Binary\Basic\Number.cs" />
+    <Compile Include="Binary\Dynamic.cs" />
     <Compile Include="Binary\Object.cs" />
-    <Compile Include="Binary\IBinaryConverter.cs" />
-    <Compile Include="Binary\RefObject.cs" />
+    <Compile Include="Binary\BinaryConverter.cs" />
     <Compile Include="Binary\Type.cs" />
     <Compile Include="Helpers\Exception.cs" />
+    <Compile Include="HttpServer\JsFile.cs" />
     <Compile Include="HttpServer\File.cs" />
     <Compile Include="HttpServer\HttpServer.cs" />
     <Compile Include="HttpServer\HtmlFile.cs" />
@@ -71,8 +75,15 @@
     <Compile Include="WebSocket\WSHandler.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Binary\BinaryConvert.js" />
-    <Content Include="RPC\Client.js" />
+    <Content Include="JavaScript\0_BinaryTypes.js" />
+    <Content Include="JavaScript\1_BinaryConverter.js" />
+    <Content Include="JavaScript\2_wsClient.js" />
+    <Content Include="JavaScript\Client.min.js">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Client.tt</DependentUpon>
+    </Content>
+    <Content Include="TextTransform.exe" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -80,6 +91,15 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="JavaScript\Client.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Client.min.js</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
@@ -89,6 +109,10 @@
     </PropertyGroup>
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
+  <PropertyGroup>
+    <PostBuildEvent>cd $(ProjectDir)
+TextTransform.exe JavaScript/Client.tt</PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

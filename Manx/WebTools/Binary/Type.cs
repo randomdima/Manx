@@ -9,47 +9,66 @@ using System.Threading.Tasks;
 
 namespace WebTools.Binary
 {
-    internal sealed class BinaryMemberInfo
-    {
-        public string Name { get; set; }
-        public BinaryTypeInfo Type { get; set; }
-    }
-    internal sealed class BinaryTypeInfo:IRefObject
+    internal class BinaryTypeInfo
     {
         public BinaryTypeInfo() { }
         public BinaryTypeInfo(Type type)
         {
-            this.type = type;
+            Name = type.Name;
+            IsSealed = type.IsSealed;
+            var mehflag=BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly;
+            Methods = type.GetMethods(mehflag).Where(q => !q.IsSpecialName).ToDictionary(q => q.Name, q => q.ReturnType);
+            Properties = type.GetProperties(mehflag).Where(q => !q.IsSpecialName).ToDictionary(q => q.Name, q => q.PropertyType);
+            Events = type.GetEvents(mehflag).Where(q => !q.IsSpecialName).ToDictionary(q => q.Name, q => typeof(int));// q.EventHandlerType.GetGenericArguments());
         }
-        public override int GetHashCode()
-        {
-            return type.Name.GetHashCode();
-        }
-        public Type type;
+        public string Name { get; set; }
+        public bool IsSealed { get; set; }
+        public Dictionary<string, Type> Methods { get; set; }
+        public Dictionary<string, Type> Properties { get; set; }
+        public Dictionary<string, Type> Events { get; set; }
+    }
 
-        public BinaryTypeInfo ElementType
+    public class TypeConverter:IBinaryConverter<Type>
+    {
+        private IBinaryConverter<BinaryTypeInfo> Converter;
+        private BinaryConverter Root;
+        public override int GetSize(Type value)
         {
-            get
-            {
-                if (!typeof(IList).IsAssignableFrom(type)) return null;
-                return new BinaryTypeInfo(type.GetElementType() ?? type.GetGenericArguments()[0]);
-            }
+            if (typeof(IList).IsAssignableFrom(value))
+                return Root.Byte.Size + Root.GetSize(value.GetElementType() ?? value.GetGenericArguments()[0]);
+            if (typeof(IDictionary).IsAssignableFrom(value))
+                return Root.Byte.Size + Root.GetSize(value.GetGenericArguments()[1]);
+
+            return Root.Byte.Size + Converter.GetSize(new BinaryTypeInfo(value));
         }
-        public BinaryMemberInfo[] Methods
+
+        public override Type Read(byte[] buffer, ref int offset)
         {
-            get
-            {
-                if (typeof(IList).IsAssignableFrom(type)) return null;
-                return type.GetMethods(BindingFlags.InvokeMethod).Select(q => new BinaryMemberInfo() { Name = q.Name, Type = new BinaryTypeInfo(q.ReturnType) }).ToArray();
-            }
+            throw new NotImplementedException();
         }
-        public BinaryMemberInfo[] Properties
+
+        public override void Write(byte[] buffer, Type value, ref int offset)
         {
-            get
+            if (typeof(IList).IsAssignableFrom(value))
             {
-                if (typeof(IList).IsAssignableFrom(type)) return null;
-                return type.GetProperties().Select(q => new BinaryMemberInfo() { Name = q.Name, Type = new BinaryTypeInfo(q.PropertyType) }).ToArray();
+                Root.Byte.Write(buffer,1,ref offset);
+                Root.Write(buffer, value.GetElementType() ?? value.GetGenericArguments()[0], ref offset);
+                return;
             }
+            if (typeof(IDictionary).IsAssignableFrom(value))
+            {
+                Root.Byte.Write(buffer, 2, ref offset);
+                Root.Write(buffer, value.GetGenericArguments()[1], ref offset);
+                return;
+            }
+            Root.Byte.Write(buffer, 0, ref offset);
+            Converter.Write(buffer, new BinaryTypeInfo(value), ref offset);
+        }
+        public override void Init(BinaryConverter Root)
+        {
+            this.Root = Root;
+            Converter = new ObjectConverter<BinaryTypeInfo>();
+            Converter.Init(Root);
         }
     }
 }

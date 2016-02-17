@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using WebTools.Binary;
 using WebTools.HttpServer;
@@ -17,14 +19,11 @@ namespace Server.Tools
             using (HttpServer server = new HttpServer(port:12397))
             {
                 var files = server.AddFolder("..//..//Scripts", "*.js");
-                files.Add(server.Add("wsClient.js", RPCSocketHandler.wsClient));
+                files.Add(server.Add("..//..//..//WebTools//JavaScript//Client.min.js"));
                 server.Add(new HtmlFile("", "Manx", files));
                 var global = new World();
-                global.qwe = new List<int>() { 1, 2, 3, 4, 5 };
-                global.Add(100, 100,10, "green");
-                global.Add(200, 100, 20, "red");
-                global.Add(200, 200, 30, "blue");
-                global.Items.Add(global.Items[0]);
+                global.Add(100,100,10,"red");
+
                 var WS = new RPCSocketHandler();
                 WS.OnConnect += q =>
                 {
@@ -32,16 +31,15 @@ namespace Server.Tools
                 };
                 server.Add("ws", WS);
                 server.Start();
-                //Console.WriteLine("Listening...");
+                Console.WriteLine("Listening...");
                 Console.ReadLine();
             }
         }
     }
 
-    class World : IRefObject
+    class World
     {
         public List<Child> Items {get;set;}
-        public List<int> qwe { get; set; }
         public event Action<Child> ItemAdded;
         public event Action<Child> ItemRemoved;
         public World()
@@ -60,7 +58,7 @@ namespace Server.Tools
             if (ItemRemoved != null) ItemRemoved(Item);
         }
     }
-    class Child : IRefObject
+    class Child
     {
         public int X { get; set; }
         public int Y { get; set; }

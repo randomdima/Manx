@@ -61,57 +61,29 @@ namespace WebTools.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to var BinaryTypes = {
-        ///    Type: { key: -1051447098 },
-        ///    Object: { key: -737641570 },
-        ///    Int: { key: -118636331 },
-        ///    String: { key: 1236129805 }
+        ///   Looks up a localized string similar to function BinaryString() {
+        ///    this.read = function (raw) {
+        ///        var len = raw.buffer[raw.offset++];
+        ///        var str = String.fromCharCode.apply(null, raw.buffer.slice(raw.offset, raw.offset + len));
+        ///        raw.offset += len;
+        ///        return str;
+        ///    }
+        ///    this.Write = function (raw) {
+        ///    }
+        ///    this.GetSize = function (raw) {
+        ///    }
         ///}
-        ///BinaryTypes.Type.Properties = { elementType: { Name: BinaryTypes.String, Type: BinaryTypes.Int } };
-        ///BinaryTypes.Type.Methods = { elementType: { Name: BinaryTypes.String, Type: BinaryTypes.Int } };
         ///
-        ///function BinaryConverter() {
-        ///    var me = this;
-        ///    me.offset=0;
-        ///    me.buffer=null;
-        ///    me.view=null;
-        ///    me.Providers = [ArrayProvider,ObjectProvider [rest of string was truncated]&quot;;.
+        ///
+        ///function BinaryNumber(type) {
+        ///    this.reader = &apos;get&apos; + type;
+        ///    this.Size = 4;
+        ///    this.Read = function (raw) {
+        ///        var val = raw.view[this.reader] [rest of string was truncated]&quot;;.
         /// </summary>
-        internal static string BinaryConvert {
+        internal static string Client_min {
             get {
-                return ResourceManager.GetString("BinaryConvert", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to window.RPCMessageType = {
-        ///    Invoke:2,
-        ///    Bind:1,
-        ///    Event:0
-        ///}
-        ///function BinaryConverter() {
-        ///    var me = this;
-        ///    me.Int = {
-        ///        Read: function () {
-        ///        },
-        ///        Write: function () {
-        ///        }
-        ///    };
-        ///}
-        ///function ParseString(raw) {
-        ///    var len = raw.buffer[raw.offset++];
-        ///    var str = String.fromCharCode.apply(null, raw.buffer.slice(raw.offset, raw.offset+len));
-        ///    raw.offset += len;
-        ///    return str;
-        ///}
-        ///function ParseType(raw) {
-        ///    //Reading Methods
-        ///    var type = {
-        ///       [rest of string was truncated]&quot;;.
-        /// </summary>
-        internal static string Client {
-            get {
-                return ResourceManager.GetString("Client", resourceCulture);
+                return ResourceManager.GetString("Client_min", resourceCulture);
             }
         }
     }

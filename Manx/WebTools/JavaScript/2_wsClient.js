@@ -21,8 +21,16 @@ function RPCClient(url) {
             window.setTimeout(function () { me.start() }, 1000);
         };
         socket.onmessage = function (event) {
-            var data = converter.Convert(event.data);
-           
+            var message = converter.Convert(event.data);
+            if (message instanceof RPCEventMessage) {
+                alert('Event ' + message.member);
+                switch (message.member) {
+                    case 'Start':
+                        handlers.Start.apply(me,message.args);
+                }
+            }
+            if(message instanceof RPCInvokeMessage)
+                alert('Invoke '+message.member)
             //switch (data.type) {
             //    case RPCMessageType.Event:
             //        return onEvent(data);
@@ -33,7 +41,7 @@ function RPCClient(url) {
         };
     };
     me.send = function (data) {
-        socket.send(JSON.stringify(data));
+        socket.send('123');//JSON.stringify(data));
     }
     me.onError = function (fn) {
         handlers.Error = fn;
