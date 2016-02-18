@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Binary\Function.cs" />
     <Compile Include="Binary\Basic\Bool.cs" />
     <Compile Include="Binary\Dictionary.cs" />
     <Compile Include="Binary\Array.cs" />
@@ -75,8 +76,7 @@
     <Compile Include="WebSocket\WSHandler.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="JavaScript\0_BinaryTypes.js" />
-    <Content Include="JavaScript\1_BinaryConverter.js" />
+    <Content Include="JavaScript\0_Binary.js" />
     <Content Include="JavaScript\2_wsClient.js" />
     <Content Include="JavaScript\Client.min.js">
       <AutoGen>True</AutoGen>

@@ -12,10 +12,16 @@ namespace ConsoleApplication1
         static void Main(string[] args)
         {
             qwe real = new qwe();
-            Console.WriteLine(real.GetHashCode());
-            Console.WriteLine(real.GetHashCode());
-            real = new qwe();
-            Console.WriteLine(real.GetHashCode());
+            real.x = 2;
+            Console.WriteLine(real.x);
+
+            real = Proxy.Create(real);
+
+            Console.WriteLine(real.x);
+            real.x++;
+            Console.WriteLine(real.x);
+
+
             Console.ReadKey();
 
         }

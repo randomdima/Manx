@@ -21,13 +21,17 @@ namespace Server.Tools
                 var files = server.AddFolder("..//..//Scripts", "*.js");
                 files.Add(server.Add("..//..//..//WebTools//JavaScript//Client.min.js"));
                 server.Add(new HtmlFile("", "Manx", files));
+
+
+                //{A:typeof(string)} 
                 var global = new World();
                 global.Add(100,100,10,"red");
-
+                var test = new Test();
+                test.test = (q, w) => Console.WriteLine(q + "-" + w);
                 var WS = new RPCSocketHandler();
                 WS.OnConnect += q =>
                 {
-                    (q as RPCSocketClient).Start(global);
+                    (q as RPCSocketClient).Start(test);
                 };
                 server.Add("ws", WS);
                 server.Start();
@@ -36,7 +40,10 @@ namespace Server.Tools
             }
         }
     }
-
+    public class Test
+    {
+        public Action<string, string> test { get; set; }
+    }
     class World
     {
         public List<Child> Items {get;set;}

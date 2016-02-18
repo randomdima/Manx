@@ -9,7 +9,7 @@ function RPCClient(url) {
     var socket = null;
     var handlers = {};
     var types = new Array(100);
-    var converter = new BinaryConverter();
+    var converter = new BinaryTypes.Converter();
     var objects = {};
 
     me.start = function () {
@@ -22,15 +22,16 @@ function RPCClient(url) {
         };
         socket.onmessage = function (event) {
             var message = converter.Convert(event.data);
-            if (message instanceof RPCEventMessage) {
-                alert('Event ' + message.member);
-                switch (message.member) {
-                    case 'Start':
-                        handlers.Start.apply(me,message.args);
-                }
-            }
-            if(message instanceof RPCInvokeMessage)
-                alert('Invoke '+message.member)
+            message.test('1', 'qwe');
+            //if (message instanceof RPCEventMessage) {
+            //    alert('Event ' + message.member);
+            //    switch (message.member) {
+            //        case 'Start':
+            //            handlers.Start.apply(me,message.args);
+            //    }
+            //}
+            //if(message instanceof RPCInvokeMessage)
+            //    alert('Invoke '+message.member)
             //switch (data.type) {
             //    case RPCMessageType.Event:
             //        return onEvent(data);

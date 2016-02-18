@@ -2,7 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,6 +21,8 @@ namespace WebTools.Binary
             var mehflag=BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly;
             Methods = type.GetMethods(mehflag).Where(q => !q.IsSpecialName).ToDictionary(q => q.Name, q => q.ReturnType);
             Properties = type.GetProperties(mehflag).Where(q => !q.IsSpecialName).ToDictionary(q => q.Name, q => q.PropertyType);
+            foreach (FieldInfo f in type.GetFields(mehflag).Where(q => !q.IsSpecialName))
+                Properties.Add(f.Name, f.FieldType);
             Events = type.GetEvents(mehflag).Where(q => !q.IsSpecialName).ToDictionary(q => q.Name, q => typeof(int));// q.EventHandlerType.GetGenericArguments());
         }
         public string Name { get; set; }
@@ -27,48 +31,105 @@ namespace WebTools.Binary
         public Dictionary<string, Type> Properties { get; set; }
         public Dictionary<string, Type> Events { get; set; }
     }
-
+    public enum TypeClass
+    {
+        Object=0,
+        List=1,
+        Dictionary=2,
+        Function=3
+    }
     public class TypeConverter:IBinaryConverter<Type>
     {
-        private IBinaryConverter<BinaryTypeInfo> Converter;
-        private BinaryConverter Root;
-        public override int GetSize(Type value)
+        private static ModuleBuilder DynamicModule;
+        private static int DynamicClassCount = 0;
+        static TypeConverter()
         {
-            if (typeof(IList).IsAssignableFrom(value))
-                return Root.Byte.Size + Root.GetSize(value.GetElementType() ?? value.GetGenericArguments()[0]);
-            if (typeof(IDictionary).IsAssignableFrom(value))
-                return Root.Byte.Size + Root.GetSize(value.GetGenericArguments()[1]);
-
-            return Root.Byte.Size + Converter.GetSize(new BinaryTypeInfo(value));
+            AssemblyBuilder assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName("DynamicClasses"), AssemblyBuilderAccess.Run);
+            DynamicModule = assembly.DefineDynamicModule("Module");
+        }
+        public static Type BuildType(Dictionary<string, Type> Properties)
+        {
+            TypeBuilder tb = DynamicModule.DefineType("DynamicClass" + DynamicClassCount++, TypeAttributes.Public|TypeAttributes.Sealed);
+            foreach (var f in Properties)
+            {
+                tb.DefineField(f.Key, f.Value,FieldAttributes.Public);
+            }
+            return tb.CreateType();
         }
 
+
+        private IBinaryConverter<BinaryTypeInfo> Converter;
+        private BinaryConverter Root;
+        protected TypeClass GetClass(Type type)
+        {
+            if (typeof(IList).IsAssignableFrom(type))
+                return TypeClass.List;
+            if (typeof(IDictionary).IsAssignableFrom(type))
+                return TypeClass.Dictionary;
+            if (typeof(Delegate).IsAssignableFrom(type))
+                return TypeClass.Function;
+            return TypeClass.Object;
+        }
+        public override int GetSize(Type type)
+        {
+            switch (GetClass(type))
+            {
+                case TypeClass.List: 
+                    return Root.Byte.Size + Root.GetSize(GetListType(type));
+                case TypeClass.Dictionary: 
+                    return Root.Byte.Size + Root.GetSize(GetDictType(type));
+                case TypeClass.Function:
+                    return Root.Byte.Size + Root.GetSize(GetFuncType(type));
+                default:
+                    return Root.Byte.Size + Converter.GetSize(new BinaryTypeInfo(type));
+            }
+        }
         public override Type Read(byte[] buffer, ref int offset)
         {
             throw new NotImplementedException();
         }
 
-        public override void Write(byte[] buffer, Type value, ref int offset)
+        public override void Write(byte[] buffer, Type type, ref int offset)
         {
-            if (typeof(IList).IsAssignableFrom(value))
+            var cls=GetClass(type);
+            Root.Byte.Write(buffer,(byte)cls,ref offset);
+            switch (cls)
             {
-                Root.Byte.Write(buffer,1,ref offset);
-                Root.Write(buffer, value.GetElementType() ?? value.GetGenericArguments()[0], ref offset);
-                return;
+                case TypeClass.List: 
+                    Root.Write(buffer, GetListType(type), ref offset); 
+                    break;
+                case TypeClass.Dictionary:
+                    Root.Write(buffer, GetDictType(type), ref offset);
+                    break;
+                case TypeClass.Function:
+                    Root.Write(buffer, GetFuncType(type), ref offset);
+                    break;
+                default:
+                    Converter.Write(buffer, new BinaryTypeInfo(type), ref offset);
+                    break;
             }
-            if (typeof(IDictionary).IsAssignableFrom(value))
-            {
-                Root.Byte.Write(buffer, 2, ref offset);
-                Root.Write(buffer, value.GetGenericArguments()[1], ref offset);
-                return;
-            }
-            Root.Byte.Write(buffer, 0, ref offset);
-            Converter.Write(buffer, new BinaryTypeInfo(value), ref offset);
         }
+    
         public override void Init(BinaryConverter Root)
         {
             this.Root = Root;
             Converter = new ObjectConverter<BinaryTypeInfo>();
             Converter.Init(Root);
+        }    
+        public Type GetListType(Type type)
+        {
+            return type.GetElementType() ?? type.GetGenericArguments()[0];
         }
+        public Type GetDictType(Type type)
+        {
+            return type.GetGenericArguments()[1];
+        }
+        public Type GetFuncType(Type type)
+        {
+            var param= type.GetMethod("Invoke").GetParameters().ToDictionary(q=>q.Name,q=>q.ParameterType);
+            return BuildType(param);
+        }
+    
+        
     }
 }

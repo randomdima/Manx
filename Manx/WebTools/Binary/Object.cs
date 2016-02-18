@@ -33,25 +33,45 @@ namespace WebTools.Binary
             var Reader = new List<Expression>();
             var ReaderObj = Expression.Variable(type, "O");
             Reader.Add(Expression.Assign(ReaderObj, Expression.New(type)));
-            foreach (var P in type.GetProperties())
+            var mehflag=BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly;
+            foreach (var P in type.GetProperties(mehflag).Where(q=>!q.IsSpecialName))
             {
                 var converter = Expression.Constant(Root.GetConverter(P.PropertyType));
                 var ct = converter.Value.GetType();
-                var method = ct.GetMethods().First(q => q.Name == "GetSize");
+                var methods=ct.GetMethods();
+                var method = methods.First(q => q.Name == "GetSize");
                 Sizer.Add(Expression.Call(converter, method, Expression.Property(value, P)));
 
-                method = ct.GetMethods().First(q => q.Name == "Write");
+                method = methods.First(q => q.Name == "Write");
                 if (method.IsGenericMethod)
                     method = method.MakeGenericMethod(P.PropertyType);
                 Writer.Add(Expression.Call(converter, method, buffer, Expression.Property(value, P), offset));
 
                 if (P.SetMethod != null)
                 {
-                    method = ct.GetMethods().First(q => q.Name == "Read");
+                    method = methods.First(q => q.Name == "Read");
                     if (method.IsGenericMethod)
                         method = method.MakeGenericMethod(P.PropertyType);
                     Reader.Add(Expression.Assign(Expression.Property(ReaderObj, P), Expression.Call(converter, method, buffer, offset)));
                 }
+            }   
+            foreach (var P in type.GetFields(mehflag).Where(q=>!q.IsSpecialName))
+            {
+                var converter = Expression.Constant(Root.GetConverter(P.FieldType));
+                var ct = converter.Value.GetType();
+                var methods=ct.GetMethods();
+                var method = methods.First(q => q.Name == "GetSize");
+                Sizer.Add(Expression.Call(converter, method, Expression.Field(value, P)));
+
+                method = methods.First(q => q.Name == "Write");
+                if (method.IsGenericMethod)
+                    method = method.MakeGenericMethod(P.FieldType);
+                Writer.Add(Expression.Call(converter, method, buffer, Expression.Field(value, P), offset));
+
+                method = methods.First(q => q.Name == "Read");
+                if (method.IsGenericMethod)
+                    method = method.MakeGenericMethod(P.FieldType);
+                Reader.Add(Expression.Assign(Expression.Field(ReaderObj, P), Expression.Call(converter, method, buffer, offset)));                
             }
             Expression exp;
             if (Sizer.Count == 0) exp = Expression.Constant(0);

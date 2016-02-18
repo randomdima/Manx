@@ -28,7 +28,8 @@ namespace WebTools.RPC
         }
         public void Start(object root)
         {
-            new RPCEventMessage() { Client = this, member = "Start", args = new object[] { root } }.Send();
+            Send(root);
+            //new RPCEventMessage() { Client = this, member = "Start", args = new object[] { root } }.Send();
         }
         public void Send(object message)
         {
