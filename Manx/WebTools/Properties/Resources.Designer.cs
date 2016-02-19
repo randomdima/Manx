@@ -59,32 +59,5 @@ namespace WebTools.Properties {
                 resourceCulture = value;
             }
         }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to function BinaryString() {
-        ///    this.read = function (raw) {
-        ///        var len = raw.buffer[raw.offset++];
-        ///        var str = String.fromCharCode.apply(null, raw.buffer.slice(raw.offset, raw.offset + len));
-        ///        raw.offset += len;
-        ///        return str;
-        ///    }
-        ///    this.Write = function (raw) {
-        ///    }
-        ///    this.GetSize = function (raw) {
-        ///    }
-        ///}
-        ///
-        ///
-        ///function BinaryNumber(type) {
-        ///    this.reader = &apos;get&apos; + type;
-        ///    this.Size = 4;
-        ///    this.Read = function (raw) {
-        ///        var val = raw.view[this.reader] [rest of string was truncated]&quot;;.
-        /// </summary>
-        internal static string Client_min {
-            get {
-                return ResourceManager.GetString("Client_min", resourceCulture);
-            }
-        }
     }
 }

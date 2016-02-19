@@ -13,6 +13,7 @@ namespace WebTools.HttpServer
 {
     public class HttpFile:IHttpHandler 
     {
+        public string FilePath;
         public string Path;
         public byte[] Content;
 
@@ -20,6 +21,7 @@ namespace WebTools.HttpServer
         public HttpFile(string path)
         {
             SetContent(MimeMapping.GetMimeMapping(path),File.ReadAllText(path));
+            FilePath = path;
             SetPath(path);
         }
         public HttpFile(string path, string content, string type = null)
@@ -44,7 +46,11 @@ namespace WebTools.HttpServer
         }
         public void Handle(Stream stream,byte[] request)
         {
+#if DEBUG
+            if(FilePath!=null)  SetContent(MimeMapping.GetMimeMapping(FilePath),File.ReadAllText(FilePath));
+#endif
             stream.Write(Content);
+            
            // stream.Flush();
         }
     }

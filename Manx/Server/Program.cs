@@ -19,7 +19,8 @@ namespace Server.Tools
             using (HttpServer server = new HttpServer(port:12397))
             {
                 var files = server.AddFolder("..//..//Scripts", "*.js");
-                files.Add(server.Add("..//..//..//WebTools//JavaScript//Client.min.js"));
+                files.Add(server.Add("..//..//..//WebTools//JavaScript//0_Binary.js"));
+                files.Add(server.Add("..//..//..//WebTools//JavaScript//2_wsClient.js"));
                 server.Add(new HtmlFile("", "Manx", files));
 
 

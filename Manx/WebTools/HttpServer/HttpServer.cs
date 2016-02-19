@@ -14,13 +14,6 @@ namespace WebTools.HttpServer
 {
     public class HttpServer:IDisposable
     {
-        public static string Client
-        {
-            get
-            {
-                return Properties.Resources.Client_min;
-            }
-        }
         private TcpListener Listener;
         private Dictionary<string, IHttpHandler> Handlers;
         private Thread MainThread;

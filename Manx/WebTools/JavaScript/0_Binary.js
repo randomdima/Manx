@@ -95,15 +95,14 @@
             cls.prototype['on' + q] = function () { };
         }
 
-        var cnv = [];
         var types = [];
         var assign = [];
         for (var q in this.Properties) {
             types.push('var T_' + q + '=this.Properties["'+q+'"];');
-            cnv.push('var C_' + q + '=Binary.GetConverter(T_' + q + ');');
+            types.push('var C_' + q + '=Binary.GetConverter(T_' + q + ');');
             assign.push('obj.'+q+'=C_'+q+'.Read(T_'+q+');\r\n');
         }
-        this.Read = eval(types.join('\r\n') + cnv.join('\r\n') + '(function(){var obj=new cls();\r\n ' + assign.join('\r\n') + '\r\n return obj;})');
+        this.Read = eval(types.join('\r\n') + '(function(){var obj=new cls();\r\n ' + assign.join('\r\n') + '\r\n return obj;})');
 
         this.Write = function () {
 
@@ -114,14 +113,13 @@
     Function: function (Binary,type) {
         this.IsSealed = true;
         this.IsValueType = false;
-        type = type.cfg;
         this.Read = function () {
             var props = Object.keys(type.Properties);
             var setter = [];
             for (var q in props)
                 setter.push(props[q] + ':' + props[q]);
             var wrap = function (obj) {
-                raw.CallFunction(fn, obj);
+                Binary.CallFunction(fn, obj);
             };
             var fn = eval('(function(' + props.join(',') + '){return wrap({' + setter.join(',') + '});})');
             return fn;
@@ -146,23 +144,24 @@
                 case 0:
                     return new BinaryTypes.Object(Binary,ObjCnv.Read());
                 case 1:
-                    return new BinaryTypes.Array(Binary,Binary.Read());
+                    return new BinaryTypes.Array(Binary,Binary.Read(Binary.Type));
                 case 2:
-                    return new Binary.Dictionary(Binary,Binary.Read());
+                    return new Binary.Dictionary(Binary, Binary.Read(Binary.Type));
                 case 3:
-                    return new Binary.Function(Binary,Binary.Read());
+                    return new BinaryTypes.Function(Binary, Binary.Read(Binary.Type));
             }
         }
 
     },
-    Converter: function () {
+    Converter: function (cfg) {
         var Binary = this;
         var RefLength = 1;
         var RefStorage = new Array(65535);
-        this.AddReference = function (value, key) { return RefStorage[key || (value._key = RefLength++)] = value; }
-        this.GetReference = function (key) { return key?RefStorage[key]:null; }        
+        this.AddReference = function (value, key) { return RefStorage[value._key = (key || RefLength++)] = value; }
+        this.GetReference = function (key) { return key ? RefStorage[key] : null; }
+        this.GetKey = function (value) { return value == null ? 0 : value._key; }
         this.CallFunction = function (fn, arg) {
-            console.log(arg);
+            cfg.CallFunction(this.Write([fn,arg]));
         }
         this.Convert = function (buffer) {
             Binary.offset = 0;
@@ -170,14 +169,21 @@
             return Binary.Read(Binary.Object);
         }
         this.GetConverter = function (type) {
-            return type.IsValueType ? type : Binary;
+            return (type && type.IsValueType) ? type : Binary;
         }
         this.Read = function (type) {
             var key = Binary.UInt16.Read();
-            return Binary.GetReference(key) || Binary.AddReference((type.IsSealed ? Binary.Read() : type).Read(), key);
+            var ref=Binary.GetReference(key);
+            if (ref !== undefined) return ref;
+            if(!type.IsSealed) type=Binary.Read(Binary.Type);
+            return Binary.AddReference(type.Read(type),key);
         }
-
+        this.Write = function (value) {
+            var key = this.GetKey(value);
+            Binary.UInt16.Write(key);
+        }
         this.Null = { _key: 0 };
+        this.AddReference({});
         this.AddReference(this.Boolean = new BinaryTypes.Boolean(this));
         this.AddReference(this.UInt8 = new BinaryTypes.Number(this, 'Uint8'));
         this.AddReference(this.UInt16 = new BinaryTypes.Number(this, 'Uint16'));

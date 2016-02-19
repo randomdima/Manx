@@ -1,4 +1,0 @@
-﻿<#@ template debug="false" hostspecific="true" language="C#" #>
-<#@ assembly name="bin\Debug\WebTools.dll" #>
-<#@ output extension=".min.js" #>
-<#=WebTools.HttpServer.HttpServer.BuildClient(this.Host.ResolvePath(""))#>

@@ -78,12 +78,6 @@
   <ItemGroup>
     <Content Include="JavaScript\0_Binary.js" />
     <Content Include="JavaScript\2_wsClient.js" />
-    <Content Include="JavaScript\Client.min.js">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Client.tt</DependentUpon>
-    </Content>
-    <Content Include="TextTransform.exe" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -91,12 +85,6 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
     </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="JavaScript\Client.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>Client.min.js</LastGenOutput>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
@@ -110,8 +98,8 @@
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
   <PropertyGroup>
-    <PostBuildEvent>cd $(ProjectDir)
-TextTransform.exe JavaScript/Client.tt</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
