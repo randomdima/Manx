@@ -91,6 +91,9 @@ namespace WebTools.HttpServer
             Console.WriteLine(path);
             if (Handlers.TryGetValue(path, out handler))
             {
+#if DEBUG
+                handler.Handle(stream, request);
+#else
                 try
                 {
                     handler.Handle(stream, request);
@@ -100,7 +103,9 @@ namespace WebTools.HttpServer
                     Console.WriteLine("--------------");
                     Console.WriteLine(E.Message);
                     stream.Write(BuildHttpResponse("500", "text/html", E.Message));
-                }
+                }      
+#endif
+                
             }
             else
             {

@@ -1,18 +1,11 @@
-﻿
-window.RPCMessageType = {
-    Invoke:2,
-    Bind:1,
-    Event:0
-}
-function RPCClient(url) {
+﻿function RPCClient(url) {
     var me = this;
     var socket = null;
-    var handlers = {};
+
     var types = new Array(100);
     var converter = new BinaryTypes.Converter();
-    var objects = {};
-
-    me.start = function () {
+    converter.onAction = function (data) { socket.send(data); };
+    me.start = function (onStart) {
         socket = new WebSocket(url);
         socket.binaryType = 'arraybuffer';
         socket.onclose = function (event) {
@@ -22,33 +15,19 @@ function RPCClient(url) {
         };
         socket.onmessage = function (event) {
             var message = converter.Convert(event.data);
-            message.test('1', 'qwe');
-            //if (message instanceof RPCEventMessage) {
-            //    alert('Event ' + message.member);
-            //    switch (message.member) {
-            //        case 'Start':
-            //            handlers.Start.apply(me,message.args);
-            //    }
-            //}
-            //if(message instanceof RPCInvokeMessage)
-            //    alert('Invoke '+message.member)
-            //switch (data.type) {
-            //    case RPCMessageType.Event:
-            //        return onEvent(data);
-            //}
+            message.Root.MoveTo(3, 4);
+            if (message instanceof RPCRootMessage)
+                onStart.call(me, message.Root);
+
+            if (message instanceof RPCCallBackMessage)
+                message.fn.apply(null,message.arg);
+
+            if(message instanceof RPCInvokeMessage)
+                alert('Invoke '+message.member)
         };
         socket.onerror = function () {
             onEvent({name:'Error',args:['Onknown error']});
         };
     };
-    me.send = function (data) {
-        socket.send('123');//JSON.stringify(data));
-    }
-    me.onError = function (fn) {
-        handlers.Error = fn;
-    }
-    me.onStart = function (fn) {
-        handlers.Start = fn;
-    }
 }
 

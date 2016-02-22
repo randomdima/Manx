@@ -46,6 +46,11 @@ namespace WebTools.Binary
 
         public virtual void Init(BinaryConverter Root) { }
     }
+
+    public interface IBinaryAction
+    {
+        void Process();             
+    }
     public class BinaryConverter : IBinaryConverter
     {
         private static List<Type> DefaultTypes = new List<Type>() { 
@@ -55,7 +60,12 @@ namespace WebTools.Binary
             typeof(String),           
             typeof(Object),typeof(void),
             typeof(Dictionary<string,Type>),
+            typeof(Type[]),
+            typeof(BinaryMethodInfo),
+            typeof(Dictionary<string, BinaryMethodInfo>),            
+            typeof(TypeInfo),
             typeof(Type).GetType(),
+            typeof(FunctionCall)
         };
         private Dictionary<Type, IBinaryConverter> Converters;
         public readonly List<IConverterProvider> Providers;
@@ -69,8 +79,9 @@ namespace WebTools.Binary
         public NumberConverter<UInt16> UInt16;
         public ByteConverter Byte;
         public BooleanConverter Bool;
-        public IBinaryConverter<Type> Type;
+        public TypeConverter Type;
         public IBinaryConverter<String> String;
+        public event Action<Delegate,object[]> FunctionCall;
 
         public BinaryConverter()
         {
@@ -91,6 +102,7 @@ namespace WebTools.Binary
             AddConverter(String = new StringConverter());
             AddConverter(Type = new TypeConverter());
             Converters.Add(typeof(Type).GetType(), Type);
+            AddConverter(new FunctionCallConverter());
            
         }
         private void InitNumbers()
@@ -104,6 +116,12 @@ namespace WebTools.Binary
             AddConverter(new NumberConverter<Double>());
         }
 
+        protected void AddReference(object data,ushort key)
+        {
+            if (ReferenceStorageLength <= key) ReferenceStorageLength = (ushort)(key + 1);
+            ReferenceStorage[key] = data;
+            ReferenceMap.Add(RuntimeHelpers.GetHashCode(data), key);
+        }
         public int AddReference(object data)
         {
             var key = RuntimeHelpers.GetHashCode(data);
@@ -120,12 +138,11 @@ namespace WebTools.Binary
             Converters.Add(typeof(T), converter);
             converter.Init(this);
         }
-
-        private IBinaryConverter<T> GetTypeConverter<T>()
+        public IBinaryConverter<T> GetTypeConverter<T>()
         {
             return GetTypeConverter(typeof(T)) as IBinaryConverter<T>;
         }
-        private IBinaryConverter GetTypeConverter(Type T)
+        public IBinaryConverter GetTypeConverter(Type T)
         {
             IBinaryConverter cnv;
             Converters.TryGetValue(T, out cnv);
@@ -145,9 +162,12 @@ namespace WebTools.Binary
         }
         public IBinaryConverter GetConverter(Type T)
         {
-            if (T.IsValueType || typeof(string)==T || (typeof(ICollection).IsAssignableFrom(T)))
-                return GetTypeConverter(T);
-            return this;
+            switch (Type.GetClass(T))
+            {
+                case TypeClass.Object:
+                case TypeClass.Function:return this;
+                default:return GetTypeConverter(T);
+            }
         }
         public int CheckSize(object value)
         {
@@ -163,7 +183,22 @@ namespace WebTools.Binary
             Write(res, value, ref offset);
             return res;
         }
-                
+        public T Convert<T>(byte[] data)
+        {
+            var offset = 0;
+            return Read<T>(data, ref offset);
+        }
+        public void Process(byte[] data)
+        {
+            var x = Convert<IBinaryAction>(data);
+            if (x != null) x.Process();
+        }
+        public object Convert(byte[] data)
+        {
+            var offset = 0;
+            return Read(data, ref offset);
+        }
+
         public int GetSize(object value)
         {
             var key = RuntimeHelpers.GetHashCode(value);
@@ -172,8 +207,19 @@ namespace WebTools.Binary
             ReferenceMap.Add(key, 1);
             var type = value.GetType();
             int size = UInt16.Size + GetTypeConverter(type).GetSize(value);
-            if (type.IsSealed) return size;
+           // if (type.IsSealed) return size;
             return size + GetSize(type); 
+        }
+        public int GetSize<T>(object value)
+        {
+            var key = RuntimeHelpers.GetHashCode(value);
+            if (ReferenceMap.ContainsKey(key))
+                return UInt16.Size;
+            ReferenceMap.Add(key, 1);
+            var type = value.GetType();
+            int size = UInt16.Size + GetTypeConverter(type).GetSize(value);
+            if (typeof(T).IsSealed) return size;
+            return size + GetSize(type);
         }
         public bool WriteReference(byte[] buffer, object value, ref int offset)
         {
@@ -204,19 +250,37 @@ namespace WebTools.Binary
             Write(buffer, value.GetType(), ref offset);
             GetObjectConverter(value).Write(buffer, value, ref offset);
         }
+        
         public T Read<T>(byte[] buffer, ref int offset)
         {
-            return (T)Read(buffer, ref offset);
+            var key = UInt16.Read(buffer, ref offset);
+            if (ReferenceStorageLength > key) return (T)ReferenceStorage[key];
+
+            var type = typeof(T);
+            if(!type.IsSealed) type=Read<Type>(buffer, ref offset);
+            var value = (T)GetTypeConverter(type).Read(buffer, ref offset);
+            AddReference(value, key);
+            return value;
         }
         public object Read(byte[] buffer, ref int offset)
         {
-            throw new NotImplementedException();
-        }
+            var key = UInt16.Read(buffer, ref offset);
+            if (ReferenceStorageLength > key) return ReferenceStorage[key];
 
+            var type = Read<Type>(buffer,ref offset);
+            var value = GetTypeConverter(type).Read(buffer,ref offset);
+            AddReference(value,key);
+            return value;
+        }
 
         public void Init(BinaryConverter Root)
         {
             throw new NotImplementedException();
+        }
+
+        public void onFunctionCall(Delegate fn,object[] args)
+        {
+            if(FunctionCall!=null) FunctionCall(fn, args);
         }
     }
 }

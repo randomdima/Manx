@@ -10,19 +10,7 @@ using WebTools.Helpers;
 
 namespace WebTools.RPC
 {   
-    public class RPCSocketHandler : WSHandler
+    public class RPCSocketHandler : WSHandler<RPCSocketClient>
     {
-        protected override WSClient CreateClient(Stream stream, byte[] request)
-        {
-            return new RPCSocketClient(stream);
-        }
-        public void FireEvent(string Name, object Data)
-        {
-            //Send(c, "", Name, Serializer.Serialize(Data));
-        }
-        private void Send(string key, string handlerid,string body)
-        {
-            Send(StreamHelpers.Join(key," ",handlerid," ",body));
-        }
     }
 }

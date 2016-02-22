@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Binary\FunctionCall.cs" />
     <Compile Include="Binary\Function.cs" />
     <Compile Include="Binary\Basic\Bool.cs" />
     <Compile Include="Binary\Dictionary.cs" />

@@ -14,24 +14,19 @@ using WebTools.Binary;
 
 namespace WebTools.RPC
 {
-    public class RPCHandler
-    {
-        public string Path { get; set; }
-        public HandlerType Handler { get; set; }
-    }
-
     public class RPCSocketClient: WSClient 
     {
         protected BinaryConverter Converter;
-        public RPCSocketClient(Stream stream) : base(stream) {
+        private object qwe= new object();
+        private object qwe2 = new object();
+        public RPCSocketClient()  {
             Converter = new BinaryConverter();
+            Converter.FunctionCall += (fn,arg) => {
+                lock(qwe2)
+                Send(new RPCCallBackMessage() { arg=arg,fn=fn  });
+            };
         }
-        public void Start(object root)
-        {
-            Send(root);
-            //new RPCEventMessage() { Client = this, member = "Start", args = new object[] { root } }.Send();
-        }
-        public void Send(object message)
+        public void Send(RPCMessage message)
         {
             var len = Converter.CheckSize(message);
             var offset = GetResponseHeaderSize(len);
@@ -40,20 +35,20 @@ namespace WebTools.RPC
             Converter.Write(data, message, ref offset);
             SendRaw(data);
         }
-
-        protected override void onMessage(object message)
+        protected override void onMessage(byte[] message)
         {
-            try
+            lock (qwe)
             {
-                new RPCInvokeMessage() { Client = this, member = "Click" }.Send();
-               //var msg = Converter.Convert<RPCMessage>(message as byte[]);
-               //msg.Process();
+                Converter.Process(message);
             }
-            catch (Exception E)
-            {
-                new RPCEventMessage() { Client=this,member="Error",args=new object[]{E.Message} }.Send();
-            }
+            //try
+            //{
+               
+            //}
+            //catch (Exception E)
+            //{
+            //    //Send(new RPCEventMessage() { member = "Error", args = new object[] { E.Message } });
+            //}
         }
-
     }
 }

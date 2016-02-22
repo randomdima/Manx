@@ -22,17 +22,18 @@ namespace Server.Tools
                 files.Add(server.Add("..//..//..//WebTools//JavaScript//0_Binary.js"));
                 files.Add(server.Add("..//..//..//WebTools//JavaScript//2_wsClient.js"));
                 server.Add(new HtmlFile("", "Manx", files));
-
-
-                //{A:typeof(string)} 
+                
+                                
                 var global = new World();
-                global.Add(100,100,10,"red");
-                var test = new Test();
-                test.test = (q, w) => Console.WriteLine(q + "-" + w);
+
+
+                global.Add(100, 100, 20, "red");
+                global.Add(200, 100, 20, "green");
+                global.Add(100, 200, 20, "blue");
                 var WS = new RPCSocketHandler();
                 WS.OnConnect += q =>
                 {
-                    (q as RPCSocketClient).Start(test);
+                    q.Send(new RPCRootMessage(global.Items[0]));
                 };
                 server.Add("ws", WS);
                 server.Start();
@@ -41,13 +42,9 @@ namespace Server.Tools
             }
         }
     }
-    public class Test
-    {
-        public Action<string, string> test { get; set; }
-    }
     class World
     {
-        public List<Child> Items {get;set;}
+        public List<Child> Items;
         public event Action<Child> ItemAdded;
         public event Action<Child> ItemRemoved;
         public World()
@@ -68,16 +65,16 @@ namespace Server.Tools
     }
     class Child
     {
-        public int X { get; set; }
-        public int Y { get; set; }
-        public int Size { get; set; }
-        public string Color { get; set; }
-        public event Action<int,int> OnMove;
+        public int X;
+        public int Y;
+        public int Size;
+        public string Color;
+        //public event Action<int,int> OnMove;
         public void MoveTo(int X, int Y)
         {
             this.X = X;
             this.Y = Y;
-            if (OnMove != null) OnMove(X, Y);
+            //   if (OnMove != null) OnMove(X, Y);
         }
     }
 }

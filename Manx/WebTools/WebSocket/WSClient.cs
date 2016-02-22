@@ -37,11 +37,6 @@ namespace WebTools.WebSocket
         
         protected Stream wsStream;      
         public event Action<byte[]> OnMessage;
-        public WSClient(Stream stream)
-        {
-            wsStream = stream;        
-        }
-
         private class wsHeader
         {
             public int blockSize;
@@ -83,32 +78,29 @@ namespace WebTools.WebSocket
                     message = new byte[header.blockSize];
                     blockLoaded = 0;
                 }
-
-                var xoff = offset;
+                
                 while (offset < bufferLoaded && blockLoaded < header.blockSize)
-                {
-                    message[blockLoaded] ^= header.mask[blockLoaded % MaskSize];
-                    offset++;
-                    blockLoaded++;
-                }
-                if (blockLoaded != header.blockSize) continue;
+                    message[blockLoaded] = (byte)(buffer[offset++]^header.mask[(blockLoaded++) % MaskSize]);
+
+                if (blockLoaded != header.blockSize) continue;               
                 if (header.isFinal)
                 {
-                    if (fullmsg.Count > 0)
-                    {
+                    if (fullmsg.Count == 0)
+                        ThreadPool.QueueUserWorkItem(new WaitCallback(_onMessage), message);
+                    else {
                         fullmsg.Add(message);
-                        message = StreamHelpers.Join(fullmsg);
-                        fullmsg.Clear();
+                        ThreadPool.QueueUserWorkItem(new WaitCallback(_onMessage), fullmsg);
+                        fullmsg = new List<byte[]>();
                     }
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(onMessage), message);
                 }
-                else fullmsg.Add(message);
+                else fullmsg.Add(message);               
                 header = null;
                 message = null;
             }
         }
-        public void Handshake(byte[] request)
+        public void Handshake(Stream stream,byte[] request)
         {
+            wsStream = stream;
             int m = 0,q = 0;
             while (m != KeyPrefix.Length)
                 if (request[q++] != KeyPrefix[m++])
@@ -123,9 +115,15 @@ namespace WebTools.WebSocket
             wsStream.Write(HandshakePatternB);
             wsStream.Flush();
         }
-        protected virtual void onMessage(object message)
+
+        private void _onMessage(object message)
         {
-            if (OnMessage != null) OnMessage(message as byte[]);
+            if (message is byte[]) onMessage(message as byte[]);
+            else onMessage(StreamHelpers.Join(message as List<byte[]>));
+        }
+        protected virtual void onMessage(byte[] message)
+        {
+            if (OnMessage != null) OnMessage(message);
         }
         protected static int GetResponseHeaderSize(int datasize)
         {

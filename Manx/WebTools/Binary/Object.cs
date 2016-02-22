@@ -34,12 +34,14 @@ namespace WebTools.Binary
             var ReaderObj = Expression.Variable(type, "O");
             Reader.Add(Expression.Assign(ReaderObj, Expression.New(type)));
             var mehflag=BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly;
-            foreach (var P in type.GetProperties(mehflag).Where(q=>!q.IsSpecialName))
+            foreach (var P in type.GetProperties(mehflag).Where(q=>!q.IsSpecialName && q.GetCustomAttribute<IgnoreAttribute>() == null))
             {
                 var converter = Expression.Constant(Root.GetConverter(P.PropertyType));
                 var ct = converter.Value.GetType();
                 var methods=ct.GetMethods();
                 var method = methods.First(q => q.Name == "GetSize");
+                if (method.IsGenericMethod)
+                    method = method.MakeGenericMethod(P.PropertyType);
                 Sizer.Add(Expression.Call(converter, method, Expression.Property(value, P)));
 
                 method = methods.First(q => q.Name == "Write");
@@ -55,12 +57,14 @@ namespace WebTools.Binary
                     Reader.Add(Expression.Assign(Expression.Property(ReaderObj, P), Expression.Call(converter, method, buffer, offset)));
                 }
             }   
-            foreach (var P in type.GetFields(mehflag).Where(q=>!q.IsSpecialName))
+            foreach (var P in type.GetFields(mehflag).Where(q=>!q.IsSpecialName && q.GetCustomAttribute<IgnoreAttribute>()==null))
             {
                 var converter = Expression.Constant(Root.GetConverter(P.FieldType));
                 var ct = converter.Value.GetType();
                 var methods=ct.GetMethods();
                 var method = methods.First(q => q.Name == "GetSize");
+                if (method.IsGenericMethod)
+                    method = method.MakeGenericMethod(P.FieldType);
                 Sizer.Add(Expression.Call(converter, method, Expression.Field(value, P)));
 
                 method = methods.First(q => q.Name == "Write");

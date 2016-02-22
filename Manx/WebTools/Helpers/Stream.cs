@@ -93,8 +93,9 @@ namespace WebTools.Helpers
         }
 
 
-        public static byte[] Join(IEnumerable<byte[]> parts)
+        public static byte[] Join(IList<byte[]> parts)
         {
+            if (parts.Count == 1) return parts[0];
             var res = new byte[parts.Sum(q => q.Length)];
             var off = 0;
             foreach (byte[] part in parts)
@@ -106,7 +107,7 @@ namespace WebTools.Helpers
         }
         public static byte[] Join(params byte[][] parts)
         {
-            return Join(parts as IEnumerable<byte[]>);
+            return Join(parts as IList<byte[]>);
         }
         public static byte[] Join(params string[] parts)
         {
